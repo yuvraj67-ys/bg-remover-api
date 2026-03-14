@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Background Remover - ImgAura</title>
+    
+    <!-- Fast CDN for Mobile & PC -->
+    <script src="https://cdn.jsdelivr.net/npm/@imgly/background-removal@1.2.1/dist/browser.umd.js"></script>
+    
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; text-align: center; background-color: #111827; color: white; padding: 20px; }
+        .container { max-width: 600px; margin: auto; background: #1f2937; padding: 25px; border-radius: 15px; box-shadow: 0 10px 25px rgba(0,0,0,0.5); }
+        h2 { color: #fff; margin-bottom: 5px; }
+        input[type="file"] { margin: 20px 0; padding: 15px; border: 2px dashed #4b5563; width: 85%; border-radius: 10px; cursor: pointer; background: #374151; color: white; }
+        button { padding: 15px 30px; font-size: 18px; font-weight: bold; cursor: pointer; background: #3b82f6; color: white; border: none; border-radius: 8px; transition: 0.3s; width: 90%; }
+        button:hover { background: #2563eb; }
+        button:disabled { background: #4b5563; cursor: not-allowed; }
+        .image-box { display: flex; flex-direction: column; gap: 20px; margin-top: 20px; align-items: center; }
+        img { width: 100%; max-width: 400px; border-radius: 10px; border: 2px solid #374151; }
+        .transparent-bg { background: url('https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcR6sV7Z25tK9hZ8xUj-M_8A0P9-6T08m9N0vQ&s'); background-size: cover; }
+        #status { font-weight: bold; color: #fbbf24; margin-top: 15px; display: none; }
+        .progress-bar { width: 90%; background-color: #374151; border-radius: 10px; margin: 15px auto; display: none; overflow: hidden; height: 12px; }
+        .progress-fill { height: 100%; background-color: #10b981; width: 0%; transition: width 0.3s; }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <h2>✨ AI Background Remover</h2>
+        <p style="color: #9ca3af;">For imgaura.qzz.io (100% Free & Fast)</p>
+        
+        <input type="file" id="imageInput" accept="image/*" />
+        <br>
+        <button id="btn" onclick="removeBg()">Remove Background</button>
+        
+        <p id="status">⏳ Please wait...</p>
+        <div class="progress-bar" id="progressBar"><div class="progress-fill" id="progressFill"></div></div>
+
+        <div class="image-box">
+            <img id="originalImg" style="display: none;" />
+            <img id="resultImg" class="transparent-bg" style="display: none;" />
+        </div>
+        
+        <br>
+        <a id="downloadBtn" style="display: none; text-decoration: none; padding: 15px 30px; background: #10b981; color: white; border-radius: 8px; font-weight: bold; margin-top: 20px; width: 80%; margin-left: auto; margin-right: auto;">📥 Download Image</a>
+    </div>
+
+    <script>
+        async function removeBg() {
+            const fileInput = document.getElementById('imageInput');
+            const originalImg = document.getElementById('originalImg');
+            const resultImg = document.getElementById('resultImg');
+            const statusText = document.getElementById('status');
+            const btn = document.getElementById('btn');
+            const downloadBtn = document.getElementById('downloadBtn');
+            const progressBar = document.getElementById('progressBar');
+            const progressFill = document.getElementById('progressFill');
+
+            if (fileInput.files.length === 0) {
+                alert("Please select an image first!");
+                return;
+            }
+
+            const imageFile = fileInput.files[0];
+
+            originalImg.src = URL.createObjectURL(imageFile);
+            originalImg.style.display = 'block';
+
+            btn.disabled = true;
+            statusText.style.display = 'block';
+            progressBar.style.display = 'block';
+            resultImg.style.display = 'none';
+            downloadBtn.style.display = 'none';
+            progressFill.style.width = "0%";
+
+            statusText.innerText = "⏳ Preparing AI...";
+
+            try {
+                const config = {
+                    publicPath: "https://cdn.jsdelivr.net/npm/@imgly/background-removal@1.2.1/dist/",
+                    progress: (key, current, total) => {
+                        const percent = Math.round((current / total) * 100);
+                        progressFill.style.width = percent + "%";
+                        statusText.innerText = `⚙️ Processing Image... ${percent}%`;
+                    }
+                };
+
+                const imageBlob = await imglyRemoveBackground(imageFile, config);
+                const url = URL.createObjectURL(imageBlob);
+                
+                resultImg.src = url;
+                resultImg.style.display = 'block';
+                
+                downloadBtn.href = url;
+                downloadBtn.download = "imgaura_no_bg.png";
+                downloadBtn.style.display = 'inline-block';
+
+                statusText.innerText = "✅ Background Removed Successfully!";
+                statusText.style.color = "#10b981";
+                
+            } catch (error) {
+                console.error("AI Error:", error);
+                statusText.innerText = "❌ Error: " + error.message;
+                statusText.style.color = "#ef4444";
+            } finally {
+                btn.disabled = false;
+                setTimeout(() => { progressBar.style.display = 'none'; }, 2000);
+            }
+        }
+    </script>
+</body>
+</html>
