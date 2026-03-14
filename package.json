@@ -1,0 +1,16 @@
+{
+  "name": "bg-remover-api",
+  "version": "1.0.0",
+  "description": "Background Removal API for imgaura.qzz.io",
+  "main": "api/index.js",
+  "scripts": {
+    "start": "node api/index.js"
+  },
+  "dependencies": {
+    "cors": "^2.8.5",
+    "express": "^4.18.2"
+  },
+  "engines": {
+    "node": ">=18.x"
+  }
+}
