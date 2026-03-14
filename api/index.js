@@ -5,7 +5,7 @@ const app = express();
 
 // Aapki website ko allow karne ke liye CORS
 const corsOptions = {
-    origin: ['https://imgaura.qzz.io', 'http://localhost:3000'], // Localhost testing ke liye allow kiya hai
+    origin: '*', // Localhost testing ke liye allow kiya hai
     methods: "POST, GET, OPTIONS",
     optionsSuccessStatus: 200
 };
