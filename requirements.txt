@@ -1,4 +1,6 @@
 fastapi
 uvicorn
-rembg[cpu]   # CPU version use karo, GPU nahi milega Vercel pe
-python-multipart  # file upload ke liye
+mediapipe
+opencv-python-headless  # headless version, lighter
+pillow
+numpy
