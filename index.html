@@ -3,345 +3,215 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>ImgAura – AI Background Remover</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<title>ImgAura – BG Remover</title>
 <style>
-  :root {
-    --bg: #080b14;
-    --surface: #0e1323;
-    --card: #131929;
-    --border: rgba(99,179,237,0.12);
-    --accent: #38bdf8;
-    --accent2: #818cf8;
-    --green: #34d399;
-    --red: #f87171;
-    --text: #e2e8f0;
-    --muted: #64748b;
-    --glow: rgba(56,189,248,0.15);
-  }
-
   * { margin:0; padding:0; box-sizing:border-box; }
-
   body {
-    font-family: 'DM Sans', sans-serif;
-    background: var(--bg);
-    color: var(--text);
+    font-family: sans-serif;
+    background: #0a0f1e;
+    color: #e2e8f0;
     min-height: 100vh;
-    overflow-x: hidden;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 40px 20px;
+  }
+  h1 { font-size: 2rem; margin-bottom: 8px; color: #38bdf8; }
+  p.sub { color: #64748b; margin-bottom: 30px; font-size: 14px; }
+
+  .upload-area {
+    width: 100%; max-width: 500px;
+    border: 2px dashed #38bdf8;
+    border-radius: 16px;
+    padding: 40px;
+    text-align: center;
+    cursor: pointer;
+    background: #0e1323;
+    margin-bottom: 20px;
+    transition: background .2s;
+  }
+  .upload-area:hover { background: #111c33; }
+  .upload-area input { display: none; }
+  .upload-area label {
+    display: inline-block;
+    margin-top: 12px;
+    padding: 10px 28px;
+    background: #38bdf8;
+    color: #000;
+    border-radius: 8px;
+    font-weight: 600;
+    cursor: pointer;
   }
 
-  /* Animated BG */
-  body::before {
-    content:'';
-    position:fixed; top:0; left:0; right:0; bottom:0;
-    background:
-      radial-gradient(ellipse 60% 40% at 20% 10%, rgba(56,189,248,0.08) 0%, transparent 70%),
-      radial-gradient(ellipse 40% 30% at 80% 80%, rgba(129,140,248,0.07) 0%, transparent 60%);
-    pointer-events:none; z-index:0;
+  #status {
+    display: none;
+    width: 100%; max-width: 500px;
+    background: #0e1323;
+    border: 1px solid #1e3a5f;
+    border-radius: 12px;
+    padding: 16px 20px;
+    margin-bottom: 20px;
+    font-size: 14px;
+    color: #38bdf8;
+  }
+  .progress-bar {
+    height: 4px; background: #1e293b;
+    border-radius: 4px; margin-top: 10px; overflow: hidden;
+  }
+  #bar {
+    height: 100%; width: 0%;
+    background: linear-gradient(90deg, #38bdf8, #818cf8);
+    transition: width .3s;
+    border-radius: 4px;
   }
 
-  .wrap { position:relative; z-index:1; max-width:900px; margin:0 auto; padding:32px 20px 60px; }
-
-  /* HEADER */
-  header { text-align:center; margin-bottom:40px; }
-  .logo-badge {
-    display:inline-flex; align-items:center; gap:8px;
-    background: rgba(56,189,248,0.1);
-    border: 1px solid rgba(56,189,248,0.2);
-    border-radius:100px; padding:6px 16px; margin-bottom:20px;
-    font-size:12px; font-weight:500; color:var(--accent);
-    letter-spacing:.08em; text-transform:uppercase;
+  #results {
+    display: none;
+    width: 100%; max-width: 700px;
   }
-  .logo-dot { width:6px; height:6px; border-radius:50%; background:var(--accent); animation:pulse 1.8s ease-in-out infinite; }
-  @keyframes pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:.4;transform:scale(.7)} }
-
-  h1 {
-    font-family:'Syne',sans-serif; font-size:clamp(2rem,5vw,3.2rem); font-weight:800;
-    background: linear-gradient(135deg, #e2e8f0 20%, var(--accent) 60%, var(--accent2) 100%);
-    -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text;
-    line-height:1.1; margin-bottom:12px;
+  .grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    margin-bottom: 16px;
   }
-  .sub { color:var(--muted); font-size:15px; font-weight:300; max-width:400px; margin:0 auto; }
-
-  /* UPLOAD ZONE */
-  .upload-zone {
-    border: 2px dashed rgba(56,189,248,0.25);
-    border-radius:20px;
-    background: var(--card);
-    padding:50px 30px;
-    text-align:center;
-    cursor:pointer;
-    transition: all .3s;
-    position:relative; overflow:hidden;
-    margin-bottom:28px;
+  @media(max-width:500px){ .grid{grid-template-columns:1fr;} }
+  .img-box {
+    background: #0e1323;
+    border: 1px solid #1e3a5f;
+    border-radius: 12px;
+    overflow: hidden;
   }
-  .upload-zone:hover, .upload-zone.drag { border-color:var(--accent); background:rgba(56,189,248,0.05); }
-  .upload-zone.drag::after {
-    content:'Drop it! 🎯';
-    position:absolute; inset:0; display:flex; align-items:center; justify-content:center;
-    background:rgba(56,189,248,0.12); font-size:1.4rem; font-family:'Syne',sans-serif; font-weight:700; color:var(--accent);
+  .img-box .lbl {
+    padding: 8px 14px;
+    font-size: 12px;
+    color: #64748b;
+    text-transform: uppercase;
+    letter-spacing: .06em;
   }
-
-  .upload-icon {
-    width:64px; height:64px; border-radius:16px; margin:0 auto 16px;
-    background: linear-gradient(135deg, rgba(56,189,248,0.15), rgba(129,140,248,0.1));
-    border: 1px solid rgba(56,189,248,0.2);
-    display:flex; align-items:center; justify-content:center; font-size:28px;
+  .img-box img {
+    width: 100%; display: block;
+    background: repeating-conic-gradient(#1a2236 0% 25%, #0e1323 0% 50%) 0 0 / 16px 16px;
   }
-  .upload-title { font-family:'Syne',sans-serif; font-size:1.1rem; font-weight:700; margin-bottom:6px; }
-  .upload-hint { color:var(--muted); font-size:13px; }
-  .browse-btn {
-    display:inline-block; margin-top:14px; padding:10px 24px;
-    background:linear-gradient(135deg, var(--accent), var(--accent2));
-    border-radius:100px; font-size:13px; font-weight:500; color:#000;
-    cursor:pointer; transition:opacity .2s;
-  }
-  .browse-btn:hover { opacity:.85; }
-  #fileInput { display:none; }
-
-  /* STATUS / PROGRESS */
-  #statusBox { display:none; margin-bottom:20px; }
-  .status-inner {
-    background:var(--card); border:1px solid var(--border); border-radius:14px;
-    padding:16px 20px; display:flex; flex-direction:column; gap:10px;
-  }
-  .status-row { display:flex; align-items:center; justify-content:space-between; }
-  #statusText { font-size:14px; color:var(--accent); font-weight:500; }
-  .progress-track {
-    height:4px; background:rgba(255,255,255,0.07); border-radius:4px; overflow:hidden;
-  }
-  #progressBar {
-    height:100%; width:0%; border-radius:4px;
-    background:linear-gradient(90deg, var(--accent), var(--accent2));
-    transition:width .3s;
-  }
-
-  /* RESULTS */
-  #resultSection { display:none; }
-
-  .compare-grid {
-    display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-bottom:20px;
-  }
-  @media(max-width:550px){ .compare-grid{grid-template-columns:1fr;} }
-
-  .img-card {
-    background:var(--card); border:1px solid var(--border); border-radius:16px;
-    overflow:hidden;
-  }
-  .img-card-label {
-    padding:10px 16px; font-size:12px; font-weight:500; letter-spacing:.06em;
-    text-transform:uppercase; color:var(--muted); border-bottom:1px solid var(--border);
-  }
-  .img-card img {
-    width:100%; display:block;
-    background: repeating-conic-gradient(#1a2236 0% 25%, #0e1323 0% 50%) 0 0 / 20px 20px;
-  }
-
-  /* ACTIONS */
-  .actions { display:flex; gap:12px; flex-wrap:wrap; }
+  .actions { display: flex; gap: 12px; flex-wrap: wrap; }
   .btn {
-    flex:1; min-width:140px; padding:14px 20px;
-    border:none; border-radius:12px; cursor:pointer;
-    font-family:'DM Sans',sans-serif; font-size:14px; font-weight:500;
-    transition:all .2s; display:flex; align-items:center; justify-content:center; gap:8px;
+    flex: 1; padding: 13px 20px;
+    border: none; border-radius: 10px;
+    font-size: 14px; font-weight: 600;
+    cursor: pointer; transition: opacity .2s;
+    text-align: center; text-decoration: none;
+    display: inline-block;
   }
-  .btn-primary {
-    background:linear-gradient(135deg, var(--accent), var(--accent2));
-    color:#000;
-  }
-  .btn-primary:hover { transform:translateY(-1px); box-shadow:0 8px 24px rgba(56,189,248,0.2); }
-  .btn-secondary {
-    background:var(--surface); border:1px solid var(--border); color:var(--text);
-  }
-  .btn-secondary:hover { border-color:var(--accent); color:var(--accent); }
-
-  /* FEATURES STRIP */
-  .features {
-    display:flex; gap:12px; flex-wrap:wrap; justify-content:center;
-    margin-top:40px; padding-top:32px;
-    border-top:1px solid var(--border);
-  }
-  .feat {
-    display:flex; align-items:center; gap:8px;
-    background:var(--card); border:1px solid var(--border);
-    border-radius:100px; padding:8px 16px; font-size:12px; color:var(--muted);
-  }
-  .feat span { color:var(--accent); }
-
-  /* LOADING SPINNER */
-  .spinner {
-    width:18px; height:18px; border:2px solid rgba(56,189,248,0.3);
-    border-top-color:var(--accent); border-radius:50%;
-    animation:spin .7s linear infinite; display:none;
-  }
-  @keyframes spin { to{transform:rotate(360deg)} }
-
-  /* Toast */
-  #toast {
-    position:fixed; bottom:24px; left:50%; transform:translateX(-50%) translateY(60px);
-    background:var(--green); color:#000; padding:10px 20px; border-radius:100px;
-    font-size:13px; font-weight:500; transition:transform .3s; z-index:999;
-    pointer-events:none;
-  }
-  #toast.show { transform:translateX(-50%) translateY(0); }
+  .btn-dl { background: #38bdf8; color: #000; }
+  .btn-reset { background: #1e293b; color: #e2e8f0; border: 1px solid #334155; }
+  .btn:hover { opacity: .85; }
 </style>
 </head>
 <body>
 
-<div class="wrap">
-  <header>
-    <div class="logo-badge"><div class="logo-dot"></div> ImgAura AI</div>
-    <h1>Remove Background<br>Instantly</h1>
-    <p class="sub">AI-powered, 100% free, runs in your browser — no upload to server</p>
-  </header>
+<h1>ImgAura BG Remover</h1>
+<p class="sub">AI-powered • 100% Free • Runs in your browser</p>
 
-  <!-- UPLOAD -->
-  <div class="upload-zone" id="dropZone">
-    <div class="upload-icon">🖼️</div>
-    <div class="upload-title">Drag & Drop your image here</div>
-    <p class="upload-hint">Supports JPG, PNG, WEBP — up to 10MB</p>
-    <label class="browse-btn" for="fileInput">Browse Files</label>
-    <input type="file" id="fileInput" accept="image/*">
-  </div>
+<div class="upload-area" id="dropZone">
+  <div style="font-size:3rem">🖼️</div>
+  <p style="margin-top:10px;font-size:15px">Drag & Drop image here</p>
+  <label for="fileInput">Choose Image</label>
+  <input type="file" id="fileInput" accept="image/*">
+</div>
 
-  <!-- STATUS -->
-  <div id="statusBox">
-    <div class="status-inner">
-      <div class="status-row">
-        <span id="statusText">Loading AI model...</span>
-        <div class="spinner" id="spinner"></div>
-      </div>
-      <div class="progress-track">
-        <div id="progressBar"></div>
-      </div>
+<div id="status">
+  <span id="statusText">Loading AI model...</span>
+  <div class="progress-bar"><div id="bar"></div></div>
+</div>
+
+<div id="results">
+  <div class="grid">
+    <div class="img-box">
+      <div class="lbl">Original</div>
+      <img id="origImg" src="" alt="original">
+    </div>
+    <div class="img-box">
+      <div class="lbl">✨ BG Removed</div>
+      <img id="outImg" src="" alt="result">
     </div>
   </div>
-
-  <!-- RESULT -->
-  <div id="resultSection">
-    <div class="compare-grid">
-      <div class="img-card">
-        <div class="img-card-label">Original</div>
-        <img id="originalImg" src="" alt="Original">
-      </div>
-      <div class="img-card">
-        <div class="img-card-label">✨ Background Removed</div>
-        <img id="resultImg" src="" alt="Result">
-      </div>
-    </div>
-    <div class="actions">
-      <a id="downloadBtn" class="btn btn-primary" download="imgaura_nobg.png">
-        ⬇️ Download PNG
-      </a>
-      <button class="btn btn-secondary" onclick="resetTool()">
-        🔄 Try Another Image
-      </button>
-    </div>
-  </div>
-
-  <!-- FEATURES -->
-  <div class="features">
-    <div class="feat"><span>⚡</span> Instant processing</div>
-    <div class="feat"><span>🔒</span> Private – runs in browser</div>
-    <div class="feat"><span>🆓</span> 100% Free forever</div>
-    <div class="feat"><span>🤖</span> RMBG-1.4 AI model</div>
-    <div class="feat"><span>📱</span> Works on mobile</div>
+  <div class="actions">
+    <a id="dlBtn" class="btn btn-dl" download="imgaura_nobg.png">⬇️ Download PNG</a>
+    <button class="btn btn-reset" onclick="resetTool()">🔄 New Image</button>
   </div>
 </div>
 
-<div id="toast">✅ Download ready!</div>
-
-<!-- IMGLY Background Removal Library -->
 <script type="module">
-  import { removeBackground } from "https://cdn.jsdelivr.net/npm/@imgly/background-removal@1.4.5/dist/browser/bundle.mjs";
+  import { removeBackground } from
+    "https://cdn.jsdelivr.net/npm/@imgly/background-removal@1.4.5/dist/browser/bundle.mjs";
 
-  const dropZone   = document.getElementById("dropZone");
   const fileInput  = document.getElementById("fileInput");
-  const statusBox  = document.getElementById("statusBox");
+  const dropZone   = document.getElementById("dropZone");
+  const statusDiv  = document.getElementById("status");
   const statusText = document.getElementById("statusText");
-  const progressBar= document.getElementById("progressBar");
-  const spinner    = document.getElementById("spinner");
-  const resultSection = document.getElementById("resultSection");
-  const originalImg= document.getElementById("originalImg");
-  const resultImg  = document.getElementById("resultImg");
-  const downloadBtn= document.getElementById("downloadBtn");
-  const toast      = document.getElementById("toast");
-
-  // Drag & drop
-  dropZone.addEventListener("dragover", e => { e.preventDefault(); dropZone.classList.add("drag"); });
-  dropZone.addEventListener("dragleave", () => dropZone.classList.remove("drag"));
-  dropZone.addEventListener("drop", e => {
-    e.preventDefault(); dropZone.classList.remove("drag");
-    const f = e.dataTransfer.files[0];
-    if(f && f.type.startsWith("image/")) processImage(f);
-  });
+  const bar        = document.getElementById("bar");
+  const results    = document.getElementById("results");
+  const origImg    = document.getElementById("origImg");
+  const outImg     = document.getElementById("outImg");
+  const dlBtn      = document.getElementById("dlBtn");
 
   fileInput.addEventListener("change", e => {
     const f = e.target.files[0];
-    if(f) processImage(f);
+    if (f) process(f);
   });
 
-  async function processImage(file) {
-    // Show original preview
-    const objectUrl = URL.createObjectURL(file);
-    originalImg.src = objectUrl;
+  dropZone.addEventListener("dragover", e => e.preventDefault());
+  dropZone.addEventListener("drop", e => {
+    e.preventDefault();
+    const f = e.dataTransfer.files[0];
+    if (f && f.type.startsWith("image/")) process(f);
+  });
 
-    // UI state
-    dropZone.style.display = "none";
-    resultSection.style.display = "none";
-    statusBox.style.display = "block";
-    spinner.style.display = "block";
-    progressBar.style.width = "0%";
-    statusText.textContent = "🤖 Loading AI model (first time may take ~20s)...";
+  async function process(file) {
+    // Show original
+    origImg.src = URL.createObjectURL(file);
+
+    // Switch UI
+    dropZone.style.display  = "none";
+    results.style.display   = "none";
+    statusDiv.style.display = "block";
+    bar.style.width = "3%";
+    statusText.textContent  = "Loading AI model… (first time ~20s)";
 
     try {
-      const config = {
-        publicPath: "https://cdn.jsdelivr.net/npm/@imgly/background-removal@1.4.5/dist/browser/",
-        progress: (key, current, total) => {
+      const blob = await removeBackground(file, {
+        publicPath:
+          "https://cdn.jsdelivr.net/npm/@imgly/background-removal@1.4.5/dist/browser/",
+        model: "medium",
+        progress(key, current, total) {
           const pct = total > 0 ? Math.round((current / total) * 100) : 0;
-          progressBar.style.width = pct + "%";
-          if(key === "compute:inference") {
-            statusText.textContent = `✨ Removing background... ${pct}%`;
-          } else {
-            statusText.textContent = `📦 Loading AI model... ${pct}%`;
-          }
-        },
-        model: "medium"
-      };
+          bar.style.width = Math.max(pct, 3) + "%";
+          statusText.textContent = key.includes("inference")
+            ? `✨ Removing background… ${pct}%`
+            : `📦 Loading model… ${pct}%`;
+        }
+      });
 
-      const blob = await removeBackground(file, config);
-      const resultUrl = URL.createObjectURL(blob);
+      const url = URL.createObjectURL(blob);
+      outImg.src   = url;
+      dlBtn.href   = url;
 
-      resultImg.src = resultUrl;
-      downloadBtn.href = resultUrl;
-      downloadBtn.download = "imgaura_nobg.png";
+      statusDiv.style.display = "none";
+      results.style.display   = "block";
 
-      // Done
-      statusBox.style.display = "none";
-      resultSection.style.display = "block";
-
-    } catch(err) {
+    } catch (err) {
       console.error(err);
       statusText.textContent = "❌ Error: " + err.message;
-      spinner.style.display = "none";
-      progressBar.style.background = "#f87171";
     }
   }
 
-  window.resetTool = function() {
-    dropZone.style.display = "block";
-    resultSection.style.display = "none";
-    statusBox.style.display = "none";
+  window.resetTool = () => {
+    dropZone.style.display  = "block";
+    results.style.display   = "none";
+    statusDiv.style.display = "none";
     fileInput.value = "";
-    progressBar.style.width = "0%";
-    progressBar.style.background = "";
+    bar.style.width = "0%";
   };
-
-  downloadBtn.addEventListener("click", () => {
-    toast.classList.add("show");
-    setTimeout(() => toast.classList.remove("show"), 2500);
-  });
 </script>
 </body>
 </html>
