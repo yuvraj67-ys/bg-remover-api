@@ -1,15 +1,14 @@
 const express = require('express');
 const cors = require('cors');
-const { client } = require("@gradio/client"); // Naya package
 
 const app = express();
 
-// Testing ke liye CORS open rakha hai
+// Testing ke liye CORS open
 app.use(cors({ origin: '*' }));
 app.use(express.json({ limit: '50mb' })); 
 
 app.get('/', (req, res) => {
-    res.send("API is running perfectly with Gradio Client!");
+    res.send("API is running perfectly via Direct HuggingFace Space!");
 });
 
 app.post('/remove-bg', async (req, res) => {
@@ -20,36 +19,43 @@ app.post('/remove-bg', async (req, res) => {
             return res.status(400).json({ success: false, error: 'Image data is required' });
         }
 
-        // Base64 ko Blob (File) mein convert karna
-        const base64Data = imageBase64.replace(/^data:image\/\w+;base64,/, "");
-        const buffer = Buffer.from(base64Data, 'base64');
-        const blob = new Blob([buffer], { type: 'image/jpeg' });
+        // 🚀 MASTER HACK: Direct Hugging Face public space ko call karna
+        // Ye na 404 dega, na hi HF_TOKEN mangega, ye bilkul free hai!
+        const SPACE_URL = "https://briaai-rmbg-1-4.hf.space/api/predict";
 
-        // 🚀 MASTER HACK: Direct Hugging Face Space ko call karna
-        // Ye 100% free hai aur 404 error nahi dega
-        const hf_token = process.env.HF_API_KEY;
-        const app = await client("briaai/RMBG-1.4", { hf_token });
+        const response = await fetch(SPACE_URL, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+                data: [imageBase64] // Seedha base64 photo bhej rahe hain
+            })
+        });
 
-        // AI ko photo bhejna
-        const result = await app.predict("/predict", [blob]);
-
-        if (!result || !result.data || !result.data[0]) {
-            throw new Error("AI did not return an image.");
+        if (!response.ok) {
+            const errText = await response.text();
+            throw new Error(`AI Space Error: ${response.status} - ${errText}`);
         }
 
-        // Result mein hume image ka ek URL milega
-        const imageUrl = result.data[0].url;
+        const jsonResponse = await response.json();
 
-        // Uss image ko download karke wapas Base64 mein convert karna aapki website ke liye
-        const imageResponse = await fetch(imageUrl);
-        const arrayBuffer = await imageResponse.arrayBuffer();
-        const outputBase64 = `data:image/png;base64,${Buffer.from(arrayBuffer).toString('base64')}`;
+        if (!jsonResponse.data || !jsonResponse.data[0]) {
+            throw new Error("AI did not return a valid image.");
+        }
+
+        let outputImage = jsonResponse.data[0];
+
+        // Agar result URL format mein aaye, toh use wapas image mein badalna
+        if (typeof outputImage === 'object' && outputImage.url) {
+            const imgRes = await fetch(outputImage.url);
+            const imgBuffer = await imgRes.arrayBuffer();
+            outputImage = `data:image/png;base64,${Buffer.from(imgBuffer).toString('base64')}`;
+        }
 
         // Aapki website ko result bhejna
-        res.status(200).json({ success: true, image: outputBase64 });
+        res.status(200).json({ success: true, image: outputImage });
 
     } catch (error) {
-        console.error("Gradio Space Error:", error);
+        console.error("Server Error:", error);
         res.status(500).json({ success: false, error: error.message || 'Internal Server Error' });
     }
 });
