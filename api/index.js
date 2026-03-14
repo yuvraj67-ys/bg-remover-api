@@ -1,5 +1,6 @@
 const express = require('express');
 const cors = require('cors');
+const { client } = require("@gradio/client"); // Naya package
 
 const app = express();
 
@@ -8,7 +9,7 @@ app.use(cors({ origin: '*' }));
 app.use(express.json({ limit: '50mb' })); 
 
 app.get('/', (req, res) => {
-    res.send("API is running perfectly for imgaura.qzz.io!");
+    res.send("API is running perfectly with Gradio Client!");
 });
 
 app.post('/remove-bg', async (req, res) => {
@@ -19,43 +20,36 @@ app.post('/remove-bg', async (req, res) => {
             return res.status(400).json({ success: false, error: 'Image data is required' });
         }
 
+        // Base64 ko Blob (File) mein convert karna
         const base64Data = imageBase64.replace(/^data:image\/\w+;base64,/, "");
-        const imageBuffer = Buffer.from(base64Data, 'base64');
+        const buffer = Buffer.from(base64Data, 'base64');
+        const blob = new Blob([buffer], { type: 'image/jpeg' });
 
-        // 🚀 YAHAN MAIN FIX HAI: Naya Hugging Face Router URL
-        const HF_API_URL = "https://router.huggingface.co/hf-inference/models/briaai/RMBG-1.4";
-        const HF_TOKEN = process.env.HF_API_KEY; 
+        // 🚀 MASTER HACK: Direct Hugging Face Space ko call karna
+        // Ye 100% free hai aur 404 error nahi dega
+        const hf_token = process.env.HF_API_KEY;
+        const app = await client("briaai/RMBG-1.4", { hf_token });
 
-        if (!HF_TOKEN) {
-            return res.status(500).json({ success: false, error: 'API Key is missing in Vercel' });
+        // AI ko photo bhejna
+        const result = await app.predict("/predict", [blob]);
+
+        if (!result || !result.data || !result.data[0]) {
+            throw new Error("AI did not return an image.");
         }
 
-        const response = await fetch(HF_API_URL, {
-            headers: { 
-                Authorization: `Bearer ${HF_TOKEN}`,
-                "Content-Type": "application/octet-stream" 
-            },
-            method: "POST",
-            body: imageBuffer,
-        });
+        // Result mein hume image ka ek URL milega
+        const imageUrl = result.data[0].url;
 
-        if (!response.ok) {
-            const errorText = await response.text();
-            console.error("HF Error Details:", errorText); 
-            
-            if (response.status === 503) {
-                return res.status(503).json({ success: false, error: 'AI Model is loading, please wait 15 seconds and try again.' });
-            }
-            throw new Error(`AI Provider Error: ${response.status}`);
-        }
+        // Uss image ko download karke wapas Base64 mein convert karna aapki website ke liye
+        const imageResponse = await fetch(imageUrl);
+        const arrayBuffer = await imageResponse.arrayBuffer();
+        const outputBase64 = `data:image/png;base64,${Buffer.from(arrayBuffer).toString('base64')}`;
 
-        const resultBuffer = await response.arrayBuffer();
-        const outputBase64 = `data:image/png;base64,${Buffer.from(resultBuffer).toString('base64')}`;
-
+        // Aapki website ko result bhejna
         res.status(200).json({ success: true, image: outputBase64 });
 
     } catch (error) {
-        console.error("Server Error:", error);
+        console.error("Gradio Space Error:", error);
         res.status(500).json({ success: false, error: error.message || 'Internal Server Error' });
     }
 });
