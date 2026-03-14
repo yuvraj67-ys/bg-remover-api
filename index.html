@@ -5,6 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>AI Background Remover - ImgAura</title>
     
+    <!-- 🚀 NAYA SERVER (jsDelivr) Jo phone par block nahi hoga -->
+    <script src="https://cdn.jsdelivr.net/npm/@imgly/background-removal@1.2.1/dist/browser.umd.js"></script>
+    
     <style>
         body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; text-align: center; background-color: #111827; color: white; padding: 20px; }
         .container { max-width: 600px; margin: auto; background: #1f2937; padding: 25px; border-radius: 15px; box-shadow: 0 10px 25px rgba(0,0,0,0.5); }
@@ -29,8 +32,7 @@
         
         <input type="file" id="imageInput" accept="image/*" />
         <br>
-        <!-- Button start mein disabled rahega -->
-        <button id="btn" disabled>⏳ Loading AI Engine...</button>
+        <button id="btn" onclick="removeBg()" disabled>⏳ Loading AI...</button>
         
         <p id="status">Please wait...</p>
         <div class="progress-bar" id="progressBar"><div class="progress-fill" id="progressFill"></div></div>
@@ -45,33 +47,25 @@
     </div>
 
     <script>
-        // 🚀 STEP 1: AI Script ko background mein safely load karna
-        const script = document.createElement('script');
-        script.src = "https://unpkg.com/@imgly/background-removal@1.2.1/dist/browser.umd.js";
-        
-        script.onload = () => {
-            // Jaise hi AI load ho jayega, Button on ho jayega!
-            const btn = document.getElementById('btn');
-            btn.disabled = false;
-            btn.innerText = "✨ Remove Background";
-            console.log("AI Engine Ready!");
-        };
-
-        script.onerror = () => {
-            alert("Bhai internet issue hai, AI load nahi ho paya. Page refresh karo!");
-            document.getElementById('btn').innerText = "❌ Network Error";
-        };
-        
-        document.head.appendChild(script);
-
-        // 🚀 STEP 2: Main Image Remove Function
-        async function removeBg() {
-            // Extra safety check
-            if (typeof imglyRemoveBackground === 'undefined') {
-                alert("AI Engine abhi bhi load ho raha hai, please 2 second ruko!");
-                return;
+        // 🚀 SMART CHECKER: Ye check karega ki AI load hua ya nahi
+        let checkInterval = setInterval(() => {
+            if (typeof imglyRemoveBackground !== 'undefined') {
+                const btn = document.getElementById('btn');
+                btn.disabled = false;
+                btn.innerText = "✨ Remove Background";
+                clearInterval(checkInterval); // Checking band karo, AI ready hai!
             }
+        }, 500);
 
+        // Agar 15 second tak load nahi hua, matlab browser pakka block kar raha hai
+        setTimeout(() => {
+            if (typeof imglyRemoveBackground === 'undefined') {
+                document.getElementById('btn').innerText = "❌ Network Blocked";
+                alert("Aapka mobile network ya browser Ad-blocker AI file ko block kar raha hai. Kripya kisi aur browser (jaise Chrome) mein try karein!");
+            }
+        }, 15000);
+
+        async function removeBg() {
             const fileInput = document.getElementById('imageInput');
             const originalImg = document.getElementById('originalImg');
             const resultImg = document.getElementById('resultImg');
@@ -98,16 +92,16 @@
             downloadBtn.style.display = 'none';
             progressFill.style.width = "0%";
 
-            statusText.innerText = "⏳ Downloading AI Model (Sirf 1 baar hoga)...";
+            statusText.innerText = "⏳ AI Magic Starts... (1-2 minutes for first time)";
 
             try {
-                // AI ko model download karne ka sahi rasta (publicPath) dena
                 const config = {
-                    publicPath: "https://unpkg.com/@imgly/background-removal@1.2.1/dist/",
+                    // YAHAN BHI NAYA SERVER LAGA DIYA
+                    publicPath: "https://cdn.jsdelivr.net/npm/@imgly/background-removal@1.2.1/dist/",
                     progress: (key, current, total) => {
                         const percent = Math.round((current / total) * 100);
                         progressFill.style.width = percent + "%";
-                        statusText.innerText = `⚙️ Magic in progress... ${percent}%`;
+                        statusText.innerText = `⚙️ Processing... ${percent}%`;
                     }
                 };
 
