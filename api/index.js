@@ -3,7 +3,7 @@ const cors = require('cors');
 
 const app = express();
 
-// Testing ke liye CORS sabke liye open kiya hai
+// Testing ke liye CORS open rakha hai
 app.use(cors({ origin: '*' }));
 app.use(express.json({ limit: '50mb' })); 
 
@@ -22,7 +22,8 @@ app.post('/remove-bg', async (req, res) => {
         const base64Data = imageBase64.replace(/^data:image\/\w+;base64,/, "");
         const imageBuffer = Buffer.from(base64Data, 'base64');
 
-        const HF_API_URL = "https://api-inference.huggingface.co/models/briaai/RMBG-1.4";
+        // 🚀 YAHAN MAIN FIX HAI: Naya Hugging Face Router URL
+        const HF_API_URL = "https://router.huggingface.co/hf-inference/models/briaai/RMBG-1.4";
         const HF_TOKEN = process.env.HF_API_KEY; 
 
         if (!HF_TOKEN) {
@@ -32,7 +33,6 @@ app.post('/remove-bg', async (req, res) => {
         const response = await fetch(HF_API_URL, {
             headers: { 
                 Authorization: `Bearer ${HF_TOKEN}`,
-                // YAHAN FIX KIYA HAI: 'application/json' hata kar 'application/octet-stream' kar diya
                 "Content-Type": "application/octet-stream" 
             },
             method: "POST",
@@ -41,12 +41,12 @@ app.post('/remove-bg', async (req, res) => {
 
         if (!response.ok) {
             const errorText = await response.text();
-            console.error("HF Error Details:", errorText); // Vercel logs mein error dikhega
+            console.error("HF Error Details:", errorText); 
             
             if (response.status === 503) {
                 return res.status(503).json({ success: false, error: 'AI Model is loading, please wait 15 seconds and try again.' });
             }
-            throw new Error(`AI Provider Error: ${response.status} - ${errorText}`);
+            throw new Error(`AI Provider Error: ${response.status}`);
         }
 
         const resultBuffer = await response.arrayBuffer();
