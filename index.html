@@ -3,30 +3,33 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>FLUX.2 Pro - AI Image Generator</title>
+    <title>AI Image Generator - Imgaura</title>
     <style>
-        body { font-family: Arial, sans-serif; background-color: #f4f4f9; padding: 20px; text-align: center; }
-        .container { max-width: 400px; background: white; padding: 20px; border-radius: 10px; margin: auto; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
-        textarea, button { width: 100%; margin: 10px 0; padding: 10px; box-sizing: border-box; border-radius: 5px; }
-        textarea { height: 100px; border: 1px solid #ccc; resize: none; }
-        button { background-color: #000; color: white; border: none; font-weight: bold; cursor: pointer; }
-        button:hover { background-color: #333; }
-        #status { font-weight: bold; margin-top: 10px; }
-        #resultImage { max-width: 100%; margin-top: 15px; border-radius: 10px; display: none; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f3f4f6; padding: 20px; text-align: center; }
+        .container { max-width: 500px; background: white; padding: 30px; border-radius: 15px; margin: auto; box-shadow: 0 10px 25px rgba(0,0,0,0.1); }
+        h2 { color: #1f2937; margin-bottom: 5px; }
+        p { color: #6b7280; font-size: 14px; margin-bottom: 20px; }
+        textarea { width: 100%; height: 100px; padding: 15px; box-sizing: border-box; border-radius: 10px; border: 1px solid #d1d5db; font-size: 15px; resize: none; margin-bottom: 15px; }
+        textarea:focus { outline: none; border-color: #3b82f6; box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2); }
+        button { width: 100%; padding: 15px; background-color: #2563eb; color: white; border: none; border-radius: 10px; font-size: 16px; font-weight: bold; cursor: pointer; transition: background 0.3s; }
+        button:hover { background-color: #1d4ed8; }
+        button:disabled { background-color: #93c5fd; cursor: not-allowed; }
+        #status { font-weight: bold; margin-top: 15px; font-size: 14px; }
+        #resultImage { max-width: 100%; margin-top: 20px; border-radius: 10px; display: none; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
     </style>
 </head>
 <body>
 
     <div class="container">
-        <h2>✨ FLUX.2 Pro AI</h2>
-        <p style="font-size: 14px; color: gray;">Describe the image you want to create</p>
+        <h2>✨ AI Image Generator</h2>
+        <p>Type anything to generate a high-quality AI image</p>
         
-        <textarea id="promptInput" placeholder="Eg: Glossy candy-colored 3D letters in hot pink on a sun-drenched poolside..."></textarea>
+        <textarea id="promptInput" placeholder="Example: A futuristic cyberpunk city at night with neon lights, 4k resolution, hyper-realistic..."></textarea>
         
         <button id="generateBtn" onclick="generateImage()">Generate Image 🚀</button>
         
         <p id="status"></p>
-        <img id="resultImage" />
+        <img id="resultImage" alt="Generated AI Image" />
     </div>
 
     <script>
@@ -37,17 +40,18 @@
             const generateBtn = document.getElementById('generateBtn');
 
             if (!promptText) {
-                alert("Bhai, pehle Prompt daalo!");
+                alert("Please enter a prompt first!");
                 return;
             }
 
-            statusText.innerText = "⏳ FLUX.2 Pro AI soch raha hai... Please wait!";
-            statusText.style.color = "blue";
+            statusText.innerText = "⏳ Generating magic... Please wait 10-15 seconds!";
+            statusText.style.color = "#2563eb";
             generateBtn.disabled = true;
+            generateBtn.innerText = "Generating...";
             resultImg.style.display = "none";
 
             try {
-                // Yahan aapka Vercel API link laga hua hai 👇
+                // Aapka Vercel Backend Link
                 const response = await fetch('https://ai-image-api-mu.vercel.app/api/edit', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -57,21 +61,21 @@
                 const data = await response.json();
 
                 if (response.ok && data.success) {
-                    statusText.innerText = "Image Generated ✅";
-                    statusText.style.color = "green";
+                    statusText.innerText = "Image Generated Successfully! ✅";
+                    statusText.style.color = "#16a34a";
                     resultImg.src = data.edited_image_url;
                     resultImg.style.display = "block";
                 } else {
-                    throw new Error(data.error || "API Error");
+                    throw new Error(data.error || "Generation failed");
                 }
 
             } catch (error) {
                 console.error("API Error:", error);
-                // Agar Payment ka error aaya toh wo yahan dikhega
                 statusText.innerText = "❌ Error: " + error.message;
-                statusText.style.color = "red";
+                statusText.style.color = "#dc2626";
             } finally {
                 generateBtn.disabled = false;
+                generateBtn.innerText = "Generate Image 🚀";
             }
         }
     </script>
