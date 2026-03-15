@@ -1,217 +1,131 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>ImgAura – BG Remover</title>
-<style>
-  * { margin:0; padding:0; box-sizing:border-box; }
-  body {
-    font-family: sans-serif;
-    background: #0a0f1e;
-    color: #e2e8f0;
-    min-height: 100vh;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    padding: 40px 20px;
-  }
-  h1 { font-size: 2rem; margin-bottom: 8px; color: #38bdf8; }
-  p.sub { color: #64748b; margin-bottom: 30px; font-size: 14px; }
-
-  .upload-area {
-    width: 100%; max-width: 500px;
-    border: 2px dashed #38bdf8;
-    border-radius: 16px;
-    padding: 40px;
-    text-align: center;
-    cursor: pointer;
-    background: #0e1323;
-    margin-bottom: 20px;
-    transition: background .2s;
-  }
-  .upload-area:hover { background: #111c33; }
-  .upload-area input { display: none; }
-  .upload-area label {
-    display: inline-block;
-    margin-top: 12px;
-    padding: 10px 28px;
-    background: #38bdf8;
-    color: #000;
-    border-radius: 8px;
-    font-weight: 600;
-    cursor: pointer;
-  }
-
-  #status {
-    display: none;
-    width: 100%; max-width: 500px;
-    background: #0e1323;
-    border: 1px solid #1e3a5f;
-    border-radius: 12px;
-    padding: 16px 20px;
-    margin-bottom: 20px;
-    font-size: 14px;
-    color: #38bdf8;
-  }
-  .progress-bar {
-    height: 4px; background: #1e293b;
-    border-radius: 4px; margin-top: 10px; overflow: hidden;
-  }
-  #bar {
-    height: 100%; width: 0%;
-    background: linear-gradient(90deg, #38bdf8, #818cf8);
-    transition: width .3s;
-    border-radius: 4px;
-  }
-
-  #results {
-    display: none;
-    width: 100%; max-width: 700px;
-  }
-  .grid {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 16px;
-    margin-bottom: 16px;
-  }
-  @media(max-width:500px){ .grid{grid-template-columns:1fr;} }
-  .img-box {
-    background: #0e1323;
-    border: 1px solid #1e3a5f;
-    border-radius: 12px;
-    overflow: hidden;
-  }
-  .img-box .lbl {
-    padding: 8px 14px;
-    font-size: 12px;
-    color: #64748b;
-    text-transform: uppercase;
-    letter-spacing: .06em;
-  }
-  .img-box img {
-    width: 100%; display: block;
-    background: repeating-conic-gradient(#1a2236 0% 25%, #0e1323 0% 50%) 0 0 / 16px 16px;
-  }
-  .actions { display: flex; gap: 12px; flex-wrap: wrap; }
-  .btn {
-    flex: 1; padding: 13px 20px;
-    border: none; border-radius: 10px;
-    font-size: 14px; font-weight: 600;
-    cursor: pointer; transition: opacity .2s;
-    text-align: center; text-decoration: none;
-    display: inline-block;
-  }
-  .btn-dl { background: #38bdf8; color: #000; }
-  .btn-reset { background: #1e293b; color: #e2e8f0; border: 1px solid #334155; }
-  .btn:hover { opacity: .85; }
-</style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Image Editor - Imgaura</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f9;
+            padding: 20px;
+            text-align: center;
+        }
+        .container {
+            max-width: 400px;
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0px 4px 10px rgba(0,0,0,0.1);
+            margin: auto;
+        }
+        input[type="file"], input[type="text"], button {
+            width: 100%;
+            margin: 10px 0;
+            padding: 10px;
+            border-radius: 5px;
+            border: 1px solid #ccc;
+            box-sizing: border-box;
+        }
+        button {
+            background-color: #007bff;
+            color: white;
+            border: none;
+            cursor: pointer;
+            font-weight: bold;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        #status {
+            font-weight: bold;
+            color: #333;
+            margin-top: 10px;
+        }
+        #resultImage {
+            max-width: 100%;
+            margin-top: 15px;
+            border-radius: 10px;
+            display: none; /* Initially hidden */
+        }
+    </style>
 </head>
 <body>
 
-<h1>ImgAura BG Remover</h1>
-<p class="sub">AI-powered • 100% Free • Runs in your browser</p>
+    <div class="container">
+        <h2>🎨 AI Photo Editor</h2>
+        
+        <label style="text-align: left; display: block; font-size: 14px;">1. Select Photo:</label>
+        <input type="file" id="imageInput" accept="image/*" />
 
-<div class="upload-area" id="dropZone">
-  <div style="font-size:3rem">🖼️</div>
-  <p style="margin-top:10px;font-size:15px">Drag & Drop image here</p>
-  <label for="fileInput">Choose Image</label>
-  <input type="file" id="fileInput" accept="image/*">
-</div>
+        <label style="text-align: left; display: block; font-size: 14px; margin-top: 10px;">2. AI Prompt (e.g., make it snow, change background to red):</label>
+        <input type="text" id="promptInput" placeholder="Prompt sa ai edit kera..." />
 
-<div id="status">
-  <span id="statusText">Loading AI model...</span>
-  <div class="progress-bar"><div id="bar"></div></div>
-</div>
+        <button id="editBtn" onclick="editImage()">Image Edit ✅</button>
 
-<div id="results">
-  <div class="grid">
-    <div class="img-box">
-      <div class="lbl">Original</div>
-      <img id="origImg" src="" alt="original">
+        <p id="status"></p>
+        <img id="resultImage" alt="Edited Image Will Appear Here" />
     </div>
-    <div class="img-box">
-      <div class="lbl">✨ BG Removed</div>
-      <img id="outImg" src="" alt="result">
-    </div>
-  </div>
-  <div class="actions">
-    <a id="dlBtn" class="btn btn-dl" download="imgaura_nobg.png">⬇️ Download PNG</a>
-    <button class="btn btn-reset" onclick="resetTool()">🔄 New Image</button>
-  </div>
-</div>
 
-<script type="module">
-  import { removeBackground } from
-    "https://cdn.jsdelivr.net/npm/@imgly/background-removal@1.4.5/dist/browser/bundle.mjs";
+    <script>
+        async function editImage() {
+            const fileInput = document.getElementById('imageInput').files[0];
+            const promptText = document.getElementById('promptInput').value;
+            const statusText = document.getElementById('status');
+            const resultImg = document.getElementById('resultImage');
+            const editBtn = document.getElementById('editBtn');
 
-  const fileInput  = document.getElementById("fileInput");
-  const dropZone   = document.getElementById("dropZone");
-  const statusDiv  = document.getElementById("status");
-  const statusText = document.getElementById("statusText");
-  const bar        = document.getElementById("bar");
-  const results    = document.getElementById("results");
-  const origImg    = document.getElementById("origImg");
-  const outImg     = document.getElementById("outImg");
-  const dlBtn      = document.getElementById("dlBtn");
+            if (!fileInput || !promptText) {
+                alert("Bhai, pehle Image aur Prompt dono daalo!");
+                return;
+            }
 
-  fileInput.addEventListener("change", e => {
-    const f = e.target.files[0];
-    if (f) process(f);
-  });
+            // UI updating
+            statusText.innerText = "⏳ AI Editing in progress... Please wait 10-15 seconds.";
+            statusText.style.color = "blue";
+            editBtn.disabled = true;
+            resultImg.style.display = "none";
 
-  dropZone.addEventListener("dragover", e => e.preventDefault());
-  dropZone.addEventListener("drop", e => {
-    e.preventDefault();
-    const f = e.dataTransfer.files[0];
-    if (f && f.type.startsWith("image/")) process(f);
-  });
+            // Image ko Base64 mein convert karna
+            const reader = new FileReader();
+            reader.readAsDataURL(fileInput);
+            
+            reader.onload = async function () {
+                const base64Image = reader.result;
 
-  async function process(file) {
-    // Show original
-    origImg.src = URL.createObjectURL(file);
+                try {
+                    // Yahan aapka Vercel API link laga hua hai 👇
+                    const response = await fetch('https://ai-image-api-mu.vercel.app/api/edit', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            image: base64Image,
+                            prompt: promptText
+                        })
+                    });
 
-    // Switch UI
-    dropZone.style.display  = "none";
-    results.style.display   = "none";
-    statusDiv.style.display = "block";
-    bar.style.width = "3%";
-    statusText.textContent  = "Loading AI model… (first time ~20s)";
+                    const data = await response.json();
 
-    try {
-      const blob = await removeBackground(file, {
-        publicPath:
-          "https://cdn.jsdelivr.net/npm/@imgly/background-removal@1.4.5/dist/browser/",
-        model: "medium",
-        progress(key, current, total) {
-          const pct = total > 0 ? Math.round((current / total) * 100) : 0;
-          bar.style.width = Math.max(pct, 3) + "%";
-          statusText.textContent = key.includes("inference")
-            ? `✨ Removing background… ${pct}%`
-            : `📦 Loading model… ${pct}%`;
+                    if (data.success) {
+                        statusText.innerText = "Image Edited ✅";
+                        statusText.style.color = "green";
+                        
+                        // Show output image
+                        resultImg.src = data.edited_image_url;
+                        resultImg.style.display = "block";
+                    } else {
+                        statusText.innerText = "❌ Error: " + data.error;
+                        statusText.style.color = "red";
+                    }
+                } catch (error) {
+                    statusText.innerText = "❌ Server se connect nahi ho paya!";
+                    statusText.style.color = "red";
+                } finally {
+                    editBtn.disabled = false;
+                }
+            };
         }
-      });
+    </script>
 
-      const url = URL.createObjectURL(blob);
-      outImg.src   = url;
-      dlBtn.href   = url;
-
-      statusDiv.style.display = "none";
-      results.style.display   = "block";
-
-    } catch (err) {
-      console.error(err);
-      statusText.textContent = "❌ Error: " + err.message;
-    }
-  }
-
-  window.resetTool = () => {
-    dropZone.style.display  = "block";
-    results.style.display   = "none";
-    statusDiv.style.display = "none";
-    fileInput.value = "";
-    bar.style.width = "0%";
-  };
-</script>
 </body>
 </html>
