@@ -3,7 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Imgaura Studio</title>
+    <title>Imgaura Studio - AI Tools</title>
+    <!-- Addy Osmani's recommended Frontend AI Library -->
+    <script src="https://cdn.jsdelivr.net/npm/@imgly/background-removal@1.4.5/dist/browser.umd.min.js"></script>
     <style>
         body { font-family: Arial, sans-serif; background: #f4f4f9; text-align: center; padding: 20px; }
         .container { max-width: 500px; background: white; padding: 30px; border-radius: 12px; margin: auto; box-shadow: 0 5px 15px rgba(0,0,0,0.1); }
@@ -24,8 +26,9 @@
         
         <label>1. Select Tool:</label>
         <select id="toolSelector">
-            <!-- Wapas Render API ka link set kar diya -->
-            <option value="/api/remove-bg">✂️ AI Background Remover (Slow)</option>
+            <!-- Yeh ab Browser mein bina server ke chalega -->
+            <option value="frontend-bg-remove">✂️ AI Background Remover (Free/Local)</option>
+            <!-- Yeh teeno Render server par jayenge -->
             <option value="/api/compress">🗜️ Image Compressor</option>
             <option value="/api/filter?type=grayscale">🖤 Black & White Filter</option>
             <option value="/api/filter?type=blur">🌫️ Blur Image</option>
@@ -53,18 +56,49 @@
                 return;
             }
 
-            // Status Updating
-            if(apiEndpoint === "/api/remove-bg") {
-                statusText.innerText = "⏳ AI Background Remove ho raha hai... (Render server par 20-30 sec lag sakte hain)";
-            } else {
-                statusText.innerText = "⏳ Processing Image... Please wait!";
-            }
-            
-            statusText.style.color = "#2563eb";
             processBtn.disabled = true;
             processBtn.innerText = "Processing...";
             resultImg.style.display = "none";
+            statusText.style.color = "#2563eb";
 
+            // -----------------------------------------------------------------
+            // ADDY OSMANI'S FIX: AI Background Remover In-Browser
+            // -----------------------------------------------------------------
+            if (apiEndpoint === "frontend-bg-remove") {
+                statusText.innerText = "⏳ AI loading in browser... (Bina server ke background hat raha hai, thoda wait karein)";
+                
+                try {
+                    // MAIN FIX: Model assets ka direct CDN path dena zaroori hai
+                    const config = {
+                        publicPath: "https://cdn.jsdelivr.net/npm/@imgly/background-removal@1.4.5/dist/"
+                    };
+
+                    // Process image locally using user's device power
+                    const imageBlob = fileInput;
+                    const bgRemovedBlob = await imglyRemoveBackground(imageBlob, config);
+                    
+                    // Create URL to show image
+                    const url = URL.createObjectURL(bgRemovedBlob);
+                    
+                    statusText.innerText = "Done! Background Removed ✅";
+                    statusText.style.color = "green";
+                    resultImg.src = url;
+                    resultImg.style.display = "block";
+                } catch (error) {
+                    console.error("BG Remove Error:", error);
+                    statusText.innerText = "❌ Error: AI Model browser mein load nahi ho paya. Apna internet connection check karein.";
+                    statusText.style.color = "red";
+                } finally {
+                    processBtn.disabled = false;
+                    processBtn.innerText = "Process Image 🚀";
+                }
+                return; 
+            }
+
+            // -----------------------------------------------------------------
+            // RENDER API: For Compressor & Filters
+            // -----------------------------------------------------------------
+            statusText.innerText = "⏳ Server par processing ho rahi hai... Please wait!";
             const formData = new FormData();
             formData.append('image', fileInput);
 
@@ -75,14 +109,9 @@
             }
 
             try {
-                // Render API call
+                // Aapka working Render Server
                 const serverUrl = 'https://edit-img.onrender.com' + apiEndpoint;
-
-                const response = await fetch(serverUrl, {
-                    method: 'POST',
-                    body: formData
-                });
-
+                const response = await fetch(serverUrl, { method: 'POST', body: formData });
                 const data = await response.json();
 
                 if (response.ok && data.success) {
