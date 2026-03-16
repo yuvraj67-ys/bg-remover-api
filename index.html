@@ -3,7 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Imgaura - Pro Image Tools</title>
+    <title>Imgaura Studio</title>
+    <!-- Frontend AI Library for Background Removal -->
+    <script src="https://cdn.jsdelivr.net/npm/@imgly/background-removal@1.4.5/dist/browser.umd.min.js"></script>
     <style>
         body { font-family: Arial, sans-serif; background: #f4f4f9; text-align: center; padding: 20px; }
         .container { max-width: 500px; background: white; padding: 30px; border-radius: 12px; margin: auto; box-shadow: 0 5px 15px rgba(0,0,0,0.1); }
@@ -24,10 +26,10 @@
         
         <label>1. Select Tool:</label>
         <select id="toolSelector">
-            <option value="/api/compress">🗜️ Image Compressor (Fast)</option>
-            <option value="/api/filter?type=grayscale">🖤 Black & White Filter (Fast)</option>
-            <option value="/api/filter?type=blur">🌫️ Blur Image (Fast)</option>
-            <option value="/api/remove-bg">✂️ AI Background Remover (Slow)</option>
+            <option value="frontend-bg-remove">✂️ AI Background Remover</option>
+            <option value="/api/compress">🗜️ Image Compressor</option>
+            <option value="/api/filter?type=grayscale">🖤 Black & White Filter</option>
+            <option value="/api/filter?type=blur">🌫️ Blur Image</option>
         </select>
 
         <label>2. Upload Photo:</label>
@@ -52,22 +54,46 @@
                 return;
             }
 
-            // UI update while loading
-            if(apiEndpoint === "/api/remove-bg") {
-                statusText.innerText = "⏳ AI Background Remove ho raha hai... (It may take 15-30 sec)";
-            } else {
-                statusText.innerText = "⏳ Processing Image... Please wait!";
-            }
-            
-            statusText.style.color = "#2563eb";
             processBtn.disabled = true;
             processBtn.innerText = "Processing...";
             resultImg.style.display = "none";
+            statusText.style.color = "#2563eb";
 
+            // -----------------------------------------------------------------
+            // MAGIC FIX: AI Background Remover ko Frontend (Browser) par chalana
+            // -----------------------------------------------------------------
+            if (apiEndpoint === "frontend-bg-remove") {
+                statusText.innerText = "⏳ AI model load ho raha hai... (Pehli baar 10-15 sec lagenge, uske baad instant hoga)";
+                try {
+                    // Imgly library ko call karna
+                    const imageBlob = fileInput;
+                    const bgRemovedBlob = await imglyRemoveBackground(imageBlob);
+                    
+                    // Blob ko image URL mein convert karna
+                    const url = URL.createObjectURL(bgRemovedBlob);
+                    
+                    statusText.innerText = "Done! Background Removed ✅";
+                    statusText.style.color = "green";
+                    resultImg.src = url;
+                    resultImg.style.display = "block";
+                } catch (error) {
+                    console.error("BG Remove Error:", error);
+                    statusText.innerText = "❌ Error: AI Model browser mein load nahi ho paya.";
+                    statusText.style.color = "red";
+                } finally {
+                    processBtn.disabled = false;
+                    processBtn.innerText = "Process Image 🚀";
+                }
+                return; // Background remove hone ke baad yahan se function rok do
+            }
+
+            // -----------------------------------------------------------------
+            // Baaqi tools (Compressor, Filters) Render Server par jayenge
+            // -----------------------------------------------------------------
+            statusText.innerText = "⏳ Processing Image... Please wait!";
             const formData = new FormData();
             formData.append('image', fileInput);
 
-            // Agar filter select kiya hai, toh filter ka type bhejna hai
             if (apiEndpoint.includes('?type=')) {
                 const type = apiEndpoint.split('=')[1];
                 formData.append('filterType', type);
@@ -75,21 +101,13 @@
             }
 
             try {
-                // 👇 AAPKA RENDER API LINK YAHAN LAGA HUA HAI 👇
                 const serverUrl = 'https://edit-img.onrender.com' + apiEndpoint;
-
-                const response = await fetch(serverUrl, {
-                    method: 'POST',
-                    body: formData
-                });
-
+                const response = await fetch(serverUrl, { method: 'POST', body: formData });
                 const data = await response.json();
 
                 if (response.ok && data.success) {
                     statusText.innerText = "Done! Image Processed ✅";
                     statusText.style.color = "green";
-                    
-                    // Show final image
                     resultImg.src = data.result_image;
                     resultImg.style.display = "block";
                 } else {
