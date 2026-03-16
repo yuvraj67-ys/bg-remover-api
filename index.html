@@ -3,79 +3,105 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI Image Generator - Imgaura</title>
+    <title>Imgaura - Pro Image Tools</title>
     <style>
-        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f3f4f6; padding: 20px; text-align: center; }
-        .container { max-width: 500px; background: white; padding: 30px; border-radius: 15px; margin: auto; box-shadow: 0 10px 25px rgba(0,0,0,0.1); }
-        h2 { color: #1f2937; margin-bottom: 5px; }
-        p { color: #6b7280; font-size: 14px; margin-bottom: 20px; }
-        textarea { width: 100%; height: 100px; padding: 15px; box-sizing: border-box; border-radius: 10px; border: 1px solid #d1d5db; font-size: 15px; resize: none; margin-bottom: 15px; }
-        textarea:focus { outline: none; border-color: #3b82f6; box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2); }
-        button { width: 100%; padding: 15px; background-color: #2563eb; color: white; border: none; border-radius: 10px; font-size: 16px; font-weight: bold; cursor: pointer; transition: background 0.3s; }
+        body { font-family: Arial, sans-serif; background: #f4f4f9; text-align: center; padding: 20px; }
+        .container { max-width: 500px; background: white; padding: 30px; border-radius: 12px; margin: auto; box-shadow: 0 5px 15px rgba(0,0,0,0.1); }
+        h2 { color: #333; margin-bottom: 20px; }
+        label { text-align: left; display: block; font-weight: bold; margin-bottom: 5px; color: #555; }
+        select, input[type="file"], button { width: 100%; margin-bottom: 20px; padding: 12px; border-radius: 8px; border: 1px solid #ccc; font-size: 16px; box-sizing: border-box; }
+        button { background-color: #2563eb; color: white; border: none; font-weight: bold; cursor: pointer; transition: 0.3s; }
         button:hover { background-color: #1d4ed8; }
         button:disabled { background-color: #93c5fd; cursor: not-allowed; }
-        #status { font-weight: bold; margin-top: 15px; font-size: 14px; }
-        #resultImage { max-width: 100%; margin-top: 20px; border-radius: 10px; display: none; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+        #status { font-weight: bold; margin-top: 10px; font-size: 15px; }
+        #resultImage { max-width: 100%; margin-top: 20px; border-radius: 10px; display: none; box-shadow: 0 4px 8px rgba(0,0,0,0.2); }
     </style>
 </head>
 <body>
 
     <div class="container">
-        <h2>✨ AI Image Generator</h2>
-        <p>Type anything to generate a high-quality AI image</p>
+        <h2>🛠️ Imgaura Studio</h2>
         
-        <textarea id="promptInput" placeholder="Example: A futuristic cyberpunk city at night with neon lights, 4k resolution, hyper-realistic..."></textarea>
-        
-        <button id="generateBtn" onclick="generateImage()">Generate Image 🚀</button>
-        
+        <label>1. Select Tool:</label>
+        <select id="toolSelector">
+            <option value="/api/compress">🗜️ Image Compressor (Fast)</option>
+            <option value="/api/filter?type=grayscale">🖤 Black & White Filter (Fast)</option>
+            <option value="/api/filter?type=blur">🌫️ Blur Image (Fast)</option>
+            <option value="/api/remove-bg">✂️ AI Background Remover (Slow)</option>
+        </select>
+
+        <label>2. Upload Photo:</label>
+        <input type="file" id="imageInput" accept="image/*" />
+
+        <button id="processBtn" onclick="processImage()">Process Image 🚀</button>
+
         <p id="status"></p>
-        <img id="resultImage" alt="Generated AI Image" />
+        <img id="resultImage" alt="Output Image Will Appear Here" />
     </div>
 
     <script>
-        async function generateImage() {
-            const promptText = document.getElementById('promptInput').value;
+        async function processImage() {
+            const fileInput = document.getElementById('imageInput').files[0];
+            let apiEndpoint = document.getElementById('toolSelector').value;
             const statusText = document.getElementById('status');
             const resultImg = document.getElementById('resultImage');
-            const generateBtn = document.getElementById('generateBtn');
+            const processBtn = document.getElementById('processBtn');
 
-            if (!promptText) {
-                alert("Please enter a prompt first!");
+            if (!fileInput) {
+                alert("Bhai, pehle photo toh upload karo!");
                 return;
             }
 
-            statusText.innerText = "⏳ Generating magic... Please wait 10-15 seconds!";
+            // UI update while loading
+            if(apiEndpoint === "/api/remove-bg") {
+                statusText.innerText = "⏳ AI Background Remove ho raha hai... (It may take 15-30 sec)";
+            } else {
+                statusText.innerText = "⏳ Processing Image... Please wait!";
+            }
+            
             statusText.style.color = "#2563eb";
-            generateBtn.disabled = true;
-            generateBtn.innerText = "Generating...";
+            processBtn.disabled = true;
+            processBtn.innerText = "Processing...";
             resultImg.style.display = "none";
 
+            const formData = new FormData();
+            formData.append('image', fileInput);
+
+            // Agar filter select kiya hai, toh filter ka type bhejna hai
+            if (apiEndpoint.includes('?type=')) {
+                const type = apiEndpoint.split('=')[1];
+                formData.append('filterType', type);
+                apiEndpoint = '/api/filter';
+            }
+
             try {
-                // Aapka Vercel Backend Link
-                const response = await fetch('https://ai-image-api-mu.vercel.app/api/edit', {
+                // 👇 AAPKA RENDER API LINK YAHAN LAGA HUA HAI 👇
+                const serverUrl = 'https://edit-img.onrender.com' + apiEndpoint;
+
+                const response = await fetch(serverUrl, {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ prompt: promptText })
+                    body: formData
                 });
 
                 const data = await response.json();
 
                 if (response.ok && data.success) {
-                    statusText.innerText = "Image Generated Successfully! ✅";
-                    statusText.style.color = "#16a34a";
-                    resultImg.src = data.edited_image_url;
+                    statusText.innerText = "Done! Image Processed ✅";
+                    statusText.style.color = "green";
+                    
+                    // Show final image
+                    resultImg.src = data.result_image;
                     resultImg.style.display = "block";
                 } else {
-                    throw new Error(data.error || "Generation failed");
+                    throw new Error(data.error || "Server processing failed");
                 }
-
             } catch (error) {
-                console.error("API Error:", error);
+                console.error(error);
                 statusText.innerText = "❌ Error: " + error.message;
-                statusText.style.color = "#dc2626";
+                statusText.style.color = "red";
             } finally {
-                generateBtn.disabled = false;
-                generateBtn.innerText = "Generate Image 🚀";
+                processBtn.disabled = false;
+                processBtn.innerText = "Process Image 🚀";
             }
         }
     </script>
