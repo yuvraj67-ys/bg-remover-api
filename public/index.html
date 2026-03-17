@@ -6,69 +6,127 @@
   <title>Background Remover API</title>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
-    body { font-family: system-ui, sans-serif; max-width: 800px; margin: 2rem auto; padding: 1rem; line-height: 1.6; }
-    .container { text-align: center; }
+    body { 
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; 
+      max-width: 900px; margin: 2rem auto; padding: 1rem; 
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+    }
+    .card {
+      background: white; border-radius: 16px; padding: 2rem;
+      box-shadow: 0 10px 40px rgba(0,0,0,0.1);
+    }
+    h1 { color: #333; margin-bottom: 0.5rem; }
+    .subtitle { color: #666; margin-bottom: 1.5rem; }
     
-    /* ✅ FIX: Use opacity + pointer-events instead of display:none */
+    /* ✅ Accessible hidden file input */
     #fileInput {
       position: absolute;
-      width: 1px;
-      height: 1px;
-      padding: 0;
-      margin: -1px;
-      overflow: hidden;
-      clip: rect(0, 0, 0, 0);
-      white-space: nowrap;
-      border: 0;
+      width: 1px; height: 1px; padding: 0; margin: -1px;
+      overflow: hidden; clip: rect(0,0,0,0);
+      white-space: nowrap; border: 0;
     }
     
-    #dropZone { 
-      border: 3px dashed #007bff; border-radius: 12px; padding: 3rem 2rem; 
-      margin: 1.5rem 0; cursor: pointer; transition: all 0.2s; background: #f8f9fa;
-      user-select: none;
+    #dropZone {
+      border: 3px dashed #667eea; border-radius: 12px; padding: 3rem 2rem;
+      margin: 1.5rem 0; cursor: pointer; transition: all 0.2s;
+      background: #f8f9ff; text-align: center;
     }
-    #dropZone:hover, #dropZone.dragover { border-color: #0056b3; background: #e9ecef; }
-    #preview { display: flex; gap: 1rem; flex-wrap: wrap; justify-content: center; margin: 1rem 0; }
-    .image-box { text-align: center; }
-    .image-box img { max-width: 100%; max-height: 300px; border-radius: 8px; border: 1px solid #ddd; }
-    #status { margin: 1rem 0; padding: 0.75rem; border-radius: 6px; background: #f8f9fa; }
-    .error { background: #fff5f5; border-left: 4px solid #dc3545; }
-    .success { background: #f0fff4; border-left: 4px solid #28a745; }
-    .loading { background: #e7f3ff; border-left: 4px solid #007bff; }
-    button { 
-      padding: 0.75rem 1.5rem; background: #007bff; color: white; border: none; 
-      border-radius: 6px; cursor: pointer; font-size: 1rem; margin: 0.25rem;
+    #dropZone:hover, #dropZone.dragover {
+      border-color: #764ba2; background: #f0f4ff;
+    }
+    #dropZone p { margin: 0.5rem 0; color: #555; }
+    #dropZone small { color: #888; }
+    
+    #preview { 
+      display: flex; gap: 1.5rem; flex-wrap: wrap; 
+      justify-content: center; margin: 1.5rem 0; 
+    }
+    .image-box { text-align: center; flex: 1; min-width: 200px; }
+    .image-box p { margin: 0.5rem 0; font-weight: 500; color: #333; }
+    .image-box img { 
+      max-width: 100%; max-height: 280px; 
+      border-radius: 8px; border: 1px solid #eee; 
+      background:         linear-gradient(45deg, #eee 25%, transparent 25%),
+        linear-gradient(-45deg, #eee 25%, transparent 25%),
+        linear-gradient(45deg, transparent 75%, #eee 75%),
+        linear-gradient(-45deg, transparent 75%, #eee 75%);
+      background-size: 20px 20px;
+      background-position: 0 0, 0 10px, 10px -10px, -10px 0px;
+    }
+    
+    #status { 
+      margin: 1rem 0; padding: 0.75rem 1rem; 
+      border-radius: 8px; background: #f8f9fa; 
+      font-size: 0.95rem;
+    }
+    .error { background: #fff5f5; border-left: 4px solid #dc3545; color: #721c24; }
+    .success { background: #f0fff4; border-left: 4px solid #28a745; color: #155724; }
+    .loading { background: #e7f3ff; border-left: 4px solid #007bff; color: #004085; }
+    
+    button {
+      padding: 0.75rem 1.5rem; background: #667eea; color: white;
+      border: none; border-radius: 8px; cursor: pointer;
+      font-size: 1rem; font-weight: 500; margin: 0.25rem;
+      transition: background 0.2s;
     }
     button:disabled { background: #ccc; cursor: not-allowed; }
-    button:hover:not(:disabled) { background: #0056b3; }
-    #download { display: none; margin-top: 1rem; }
-    #progress { height: 6px; background: #e9ecef; border-radius: 3px; margin: 0.5rem 0; overflow: hidden; display: none; }
-    #progressBar { height: 100%; width: 0%; background: #007bff; transition: width 0.3s; }
-  </style>
-</head>
-<body>
-  <div class="container">
-    <h1>🎨 Background Remover API</h1>
-    <p>Powered by @imgly/background-removal • 100% client-side • Free on Vercel</p>
+    button:hover:not(:disabled) { background: #5568d3; }
     
-    <!-- ✅ FIX: Added label with for attribute + accessible file input -->
+    #download { display: none; margin-top: 1rem; text-align: center; }
+    
+    #progress { 
+      height: 6px; background: #e9ecef; border-radius: 3px; 
+      margin: 0.5rem 0; overflow: hidden; display: none; 
+    }
+    #progressBar { 
+      height: 100%; width: 0%; background: linear-gradient(90deg, #667eea, #764ba2); 
+      transition: width 0.3s ease; 
+    }
+    
+    .footer {
+      text-align: center; margin-top: 2rem; padding-top: 1rem;
+      border-top: 1px solid #eee; color: #666; font-size: 0.9rem;
+    }
+    .footer a { color: #667eea; text-decoration: none; }
+    .footer a:hover { text-decoration: underline; }
+    
+    @media (max-width: 600px) {
+      body { padding: 0.5rem; }
+      .card { padding: 1.5rem; }
+      #preview { flex-direction: column; }
+    }
+  </style></head>
+<body>
+  <div class="card">
+    <h1>🎨 Background Remover API</h1>
+    <p class="subtitle">Powered by @imgly/background-removal • 100% client-side • Free on Vercel</p>
+    
+    <!-- ✅ Working file input with label -->
     <label for="fileInput" id="dropZone">
-      <p>📁 Drag & drop an image here<br><small>or click to browse</small></p>
+      <p>📁 Drag & drop an image here</p>
+      <small>or click to browse files</small>
       <input type="file" id="fileInput" accept="image/*" />
     </label>
     
-    <div id="status">Ready to remove backgrounds ✨</div>
+    <div id="status">✨ Ready! Select an image to remove its background</div>
     <div id="progress"><div id="progressBar"></div></div>
     
     <div id="preview"></div>
     
-    <a id="download" download="no-bg.png">
-      <button>⬇️ Download PNG</button>
-    </a>
+    <div id="download">
+      <a id="downloadLink" download="no-background.png">
+        <button>⬇️ Download PNG (Transparent)</button>
+      </a>
+    </div>
     
-    <p style="margin-top: 2rem; font-size: 0.9rem; color: #666;">
-      🔒 All processing happens in your browser - images never leave your device
-    </p>
+    <div class="footer">
+      <p>🔒 All processing happens in your browser — images never leave your device</p>
+      <p style="margin-top: 0.5rem;">
+        <a href="/api/remove-bg" target="_blank">API Endpoint</a> • 
+        <a href="https://github.com/yuvraj67-ys/bg-remover-api" target="_blank">GitHub</a>
+      </p>
+    </div>
   </div>
 
   <script type="module" src="/app.js"></script>
