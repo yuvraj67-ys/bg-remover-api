@@ -1,24 +1,52 @@
 // api/remove-bg.js
-export const config = { api: { bodyParser: false } };
+// Vercel serverless function - returns API info
+// Note: Actual processing happens in browser for privacy + free hosting
 
-export default async function handler(req, res) {
-  // CORS headers
-  res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+export const config = {
+  api: {
+    bodyParser: false, // Disable body parsing for this endpoint
+  },
+};
+
+export default async function handler(request, response) {
+  // CORS headers for browser access
+  response.setHeader('Access-Control-Allow-Origin', '*');
+  response.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+  response.setHeader('Access-Control-Allow-Headers', 'Content-Type');
   
-  if (req.method === 'OPTIONS') {
-    return res.status(200).end();
+  // Handle CORS preflight
+  if (request.method === 'OPTIONS') {
+    response.status(200).end();
+    return;
   }
   
-  if (req.method !== 'POST') {
-    return res.status(405).json({ error: 'Method not allowed' });
+  // Only allow GET and POST
+  if (request.method !== 'GET' && request.method !== 'POST') {
+    response.status(405).json({ error: 'Method not allowed' });
+    return;
   }
   
-  return res.status(200).json({
+  // Return API information
+  response.status(200).json({
     success: true,
-    message: 'Client-side processing - images never leave browser',
-    endpoint: '/app.js',
-    note: '🔒 Privacy-first: All processing in your browser'
+    name: 'Background Remover API',
+    version: '1.0.0',
+    description: 'Client-side background removal using @imgly/background-removal',
+    endpoints: {
+      web: '/',
+      api: '/api/remove-bg'
+    },
+    processing: 'browser',
+    privacy: 'Images never leave the user\'s device',
+    model: {
+      name: '@imgly/background-removal',
+      version: '1.3.0',
+      size: '~40MB (cached after first load)'
+    },
+    limits: {
+      fileSize: '10MB',
+      formats: ['PNG', 'JPG', 'JPEG', 'WebP']
+    },
+    github: 'https://github.com/yuvraj67-ys/bg-remover-api'
   });
 }
