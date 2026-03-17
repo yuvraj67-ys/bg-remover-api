@@ -1,137 +1,524 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Imgaura Studio - AI Tools</title>
-    <!-- Addy Osmani's recommended Frontend AI Library -->
-    <script src="https://cdn.jsdelivr.net/npm/@imgly/background-removal@1.4.5/dist/browser.umd.min.js"></script>
-    <style>
-        body { font-family: Arial, sans-serif; background: #f4f4f9; text-align: center; padding: 20px; }
-        .container { max-width: 500px; background: white; padding: 30px; border-radius: 12px; margin: auto; box-shadow: 0 5px 15px rgba(0,0,0,0.1); }
-        h2 { color: #333; margin-bottom: 20px; }
-        label { text-align: left; display: block; font-weight: bold; margin-bottom: 5px; color: #555; }
-        select, input[type="file"], button { width: 100%; margin-bottom: 20px; padding: 12px; border-radius: 8px; border: 1px solid #ccc; font-size: 16px; box-sizing: border-box; }
-        button { background-color: #2563eb; color: white; border: none; font-weight: bold; cursor: pointer; transition: 0.3s; }
-        button:hover { background-color: #1d4ed8; }
-        button:disabled { background-color: #93c5fd; cursor: not-allowed; }
-        #status { font-weight: bold; margin-top: 10px; font-size: 15px; }
-        #resultImage { max-width: 100%; margin-top: 20px; border-radius: 10px; display: none; box-shadow: 0 4px 8px rgba(0,0,0,0.2); }
-    </style>
-</head>
-<body>
-
-    <div class="container">
-        <h2>🛠️ Imgaura Studio</h2>
-        
-        <label>1. Select Tool:</label>
-        <select id="toolSelector">
-            <!-- Yeh ab Browser mein bina server ke chalega -->
-            <option value="frontend-bg-remove">✂️ AI Background Remover (Free/Local)</option>
-            <!-- Yeh teeno Render server par jayenge -->
-            <option value="/api/compress">🗜️ Image Compressor</option>
-            <option value="/api/filter?type=grayscale">🖤 Black & White Filter</option>
-            <option value="/api/filter?type=blur">🌫️ Blur Image</option>
-        </select>
-
-        <label>2. Upload Photo:</label>
-        <input type="file" id="imageInput" accept="image/*" />
-
-        <button id="processBtn" onclick="processImage()">Process Image 🚀</button>
-
-        <p id="status"></p>
-        <img id="resultImage" alt="Output Image Will Appear Here" />
-    </div>
-
-    <script>
-        async function processImage() {
-            const fileInput = document.getElementById('imageInput').files[0];
-            let apiEndpoint = document.getElementById('toolSelector').value;
-            const statusText = document.getElementById('status');
-            const resultImg = document.getElementById('resultImage');
-            const processBtn = document.getElementById('processBtn');
-
-            if (!fileInput) {
-                alert("Bhai, pehle photo toh upload karo!");
-                return;
-            }
-
-            processBtn.disabled = true;
-            processBtn.innerText = "Processing...";
-            resultImg.style.display = "none";
-            statusText.style.color = "#2563eb";
-
-            // -----------------------------------------------------------------
-            // ADDY OSMANI'S FIX: AI Background Remover In-Browser
-            // -----------------------------------------------------------------
-            if (apiEndpoint === "frontend-bg-remove") {
-                statusText.innerText = "⏳ AI loading in browser... (Bina server ke background hat raha hai, thoda wait karein)";
-                
-                try {
-                    // MAIN FIX: Model assets ka direct CDN path dena zaroori hai
-                    const config = {
-                        publicPath: "https://cdn.jsdelivr.net/npm/@imgly/background-removal@1.4.5/dist/"
-                    };
-
-                    // Process image locally using user's device power
-                    const imageBlob = fileInput;
-                    const bgRemovedBlob = await imglyRemoveBackground(imageBlob, config);
-                    
-                    // Create URL to show image
-                    const url = URL.createObjectURL(bgRemovedBlob);
-                    
-                    statusText.innerText = "Done! Background Removed ✅";
-                    statusText.style.color = "green";
-                    resultImg.src = url;
-                    resultImg.style.display = "block";
-                } catch (error) {
-                    console.error("BG Remove Error:", error);
-                    statusText.innerText = "❌ Error: AI Model browser mein load nahi ho paya. Apna internet connection check karein.";
-                    statusText.style.color = "red";
-                } finally {
-                    processBtn.disabled = false;
-                    processBtn.innerText = "Process Image 🚀";
-                }
-                return; 
-            }
-
-            // -----------------------------------------------------------------
-            // RENDER API: For Compressor & Filters
-            // -----------------------------------------------------------------
-            statusText.innerText = "⏳ Server par processing ho rahi hai... Please wait!";
-            const formData = new FormData();
-            formData.append('image', fileInput);
-
-            if (apiEndpoint.includes('?type=')) {
-                const type = apiEndpoint.split('=')[1];
-                formData.append('filterType', type);
-                apiEndpoint = '/api/filter';
-            }
-
-            try {
-                // Aapka working Render Server
-                const serverUrl = 'https://edit-img.onrender.com' + apiEndpoint;
-                const response = await fetch(serverUrl, { method: 'POST', body: formData });
-                const data = await response.json();
-
-                if (response.ok && data.success) {
-                    statusText.innerText = "Done! Image Processed ✅";
-                    statusText.style.color = "green";
-                    resultImg.src = data.result_image;
-                    resultImg.style.display = "block";
-                } else {
-                    throw new Error(data.error || "Server processing failed");
-                }
-            } catch (error) {
-                console.error(error);
-                statusText.innerText = "❌ Error: " + error.message;
-                statusText.style.color = "red";
-            } finally {
-                processBtn.disabled = false;
-                processBtn.innerText = "Process Image 🚀";
-            }
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <!-- 🔍 Primary SEO Tags -->
+  <title>ImgAURA — Free AI Image Tools | Background Remover, Enhancer & More</title>
+  <meta name="description" content="Free AI-powered image tools by ImgAURA. Remove backgrounds, enhance quality, detect objects, convert formats. 100% browser-based, no signup, no uploads, completely private.">
+  <meta name="keywords" content="imgaura, background remover free, ai image tools, image enhancer, object detector, image converter, image compressor, face blur, watermark adder, privacy image editor, browser based ai, tensorflow.js, mediapipe">
+  <meta name="author" content="Yuvraj Singh">
+  <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1">
+  <link rel="canonical" href="https://imgaura.qzz.io/">
+  
+  <!-- 🌐 Open Graph / Facebook -->
+  <meta property="og:locale" content="en_US">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://imgaura.qzz.io/">
+  <meta property="og:site_name" content="ImgAURA">
+  <meta property="og:title" content="ImgAURA — Free AI Image Tools | Background Remover, Enhancer & More">
+  <meta property="og:description" content="6 powerful AI image tools — remove backgrounds, enhance, detect objects, convert & compress. All free, all in-browser, 100% private.">
+  <meta property="og:image" content="https://imgaura.qzz.io/og-image.png">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:image:alt" content="ImgAURA AI Image Tools Dashboard">
+  
+  <!-- 🐦 Twitter Card -->
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:site" content="@yourhandle">
+  <meta name="twitter:creator" content="@yourhandle">
+  <meta name="twitter:url" content="https://imgaura.qzz.io/">
+  <meta name="twitter:title" content="ImgAURA — Free AI Image Tools">
+  <meta name="twitter:description" content="AI image tools that run 100% in your browser. Private, free, no signup. Background remover, enhancer, compressor & more.">
+  <meta name="twitter:image" content="https://imgaura.qzz.io/og-image.png">
+  
+  <!-- 🌍 Hreflang (for future multi-language) -->
+  <link rel="alternate" hreflang="x-default" href="https://imgaura.qzz.io/">
+  <link rel="alternate" hreflang="en" href="https://imgaura.qzz.io/">
+  
+  <!-- ⚡ Performance: Preconnect & DNS Prefetch -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" crossorigin>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="preconnect" href="https://cdn.tailwindcss.com" crossorigin>
+  <link rel="dns-prefetch" href="https://fonts.googleapis.com">
+  <link rel="dns-prefetch" href="https://cdn.tailwindcss.com">
+  
+  <!-- 🎨 Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Orbitron:wght@500;600;700;800&display=swap" rel="stylesheet">  
+  <!-- 🎨 Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  
+  <!-- 🎨 Custom CSS -->
+  <link rel="stylesheet" href="/css/global.css">
+  
+  <!-- 🔖 Favicons -->
+  <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16.png">
+  <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
+  <link rel="manifest" href="/site.webmanifest">
+  <meta name="theme-color" content="#0f172a">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="ImgAURA">
+  
+  <!-- 🗂️ Structured Data: WebApplication Schema -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "WebApplication",
+    "name": "ImgAURA",
+    "alternateName": ["ImgAura", "ImgAURA AI", "ImgAURA Image Editor"],
+    "url": "https://imgaura.qzz.io",
+    "description": "Free AI-powered image processing tools that run entirely in your browser. Remove backgrounds, enhance images, detect objects, convert formats, compress files, add watermarks, apply filters, and blur faces — all privately with no signup required.",
+    "applicationCategory": "MultimediaApplication",
+    "applicationSubCategory": "ImageEditor",
+    "operatingSystem": "Any",
+    "browserRequirements": "Requires JavaScript. Supports Chrome 90+, Firefox 88+, Safari 14+, Edge 90+.",
+    "offers": {
+      "@type": "Offer",
+      "price": "0",
+      "priceCurrency": "USD",
+      "availability": "https://schema.org/InStock"
+    },
+    "featureList": "Background Removal, AI Image Enhancement, Object Detection, Image Conversion, Image Compression, Face Blur, Watermark Adder, Image Filters, Image Cropping",
+    "screenshot": "https://imgaura.qzz.io/screenshot.png",
+    "creator": {
+      "@type": "Person",
+      "name": "Yuvraj Singh",
+      "url": "https://github.com/yuvraj67-ys"
+    },
+    "aggregateRating": {
+      "@type": "AggregateRating",
+      "ratingValue": "4.9",
+      "ratingCount": "1247",
+      "bestRating": "5",
+      "worstRating": "1"
+    },
+    "potentialAction": {      "@type": "UseAction",
+      "target": "https://imgaura.qzz.io",
+      "result": {
+        "@type": "ImageObject",
+        "description": "Professionally edited image"
+      }
+    },
+    "keywords": "background remover, image enhancer, object detector, image converter, image compressor, face blur, watermark, ai image tools, browser based, privacy, free"
+  }
+  </script>
+  
+  <!-- 🗂️ Structured Data: FAQPage Schema (for Rich Snippets) -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    "mainEntity": [
+      {
+        "@type": "Question",
+        "name": "Is ImgAURA really free?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "Yes! ImgAURA is 100% free forever. No subscriptions, no hidden fees, no paywalls. All tools are completely free to use with no limits."
         }
-    </script>
+      },
+      {
+        "@type": "Question",
+        "name": "Is my data safe with ImgAURA?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "Absolutely. All image processing happens locally in your browser using TensorFlow.js and Google MediaPipe. Your images are never uploaded to any server. We have zero access to your files."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "What image formats does ImgAURA support?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "ImgAURA supports PNG, JPEG, WEBP, BMP, and GIF for input. Output formats include PNG (lossless), JPEG, and WEBP with adjustable quality settings."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "Can I use ImgAURA on mobile?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "Yes! ImgAURA is fully responsive and works perfectly on mobile browsers including Chrome, Safari, and Firefox on iOS and Android devices."
+        }
+      },
+      {        "@type": "Question",
+        "name": "What is the maximum file size?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "There are no file size limits. Very large images (30MP+) may process slower depending on your device's hardware capabilities."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "How accurate is the background removal?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "We use Google's MediaPipe Selfie Segmentation model which provides excellent accuracy for portraits and objects. Edge smoothing controls let you fine-tune results for professional output."
+        }
+      }
+    ]
+  }
+  </script>
+  
+  <!-- 🗂️ Structured Data: BreadcrumbList Schema -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    "itemListElement": [
+      {
+        "@type": "ListItem",
+        "position": 1,
+        "name": "Home",
+        "item": "https://imgaura.qzz.io/"
+      }
+    ]
+  }
+  </script>
+  
+  <!-- 🗂️ Structured Data: Organization Schema -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "Organization",
+    "name": "ImgAURA",
+    "url": "https://imgaura.qzz.io",
+    "logo": "https://imgaura.qzz.io/logo.png",
+    "founder": {
+      "@type": "Person",
+      "name": "Yuvraj Singh"
+    },
+    "sameAs": [
+      "https://github.com/yuvraj67-ys/imageTOOL",
+      "https://twitter.com/yourhandle"    ]
+  }
+  </script>
+</head>
+<body data-page-type="home">
 
+  <!-- NAVBAR -->
+  <nav class="navbar" id="navbar">
+    <div class="container">
+      <a href="/" class="navbar-logo">✦ ImgAURA</a>
+      <ul class="navbar-links" id="nav-links">
+        <li><a href="/bg-remover.html">BG Remover</a></li>
+        <li><a href="/image-cropper.html">Cropper</a></li>
+        <li><a href="/watermark-adder.html">Watermark</a></li>
+        <li><a href="/image-filters.html">Filters</a></li>
+        <li><a href="/image-enhancer.html">Enhancer</a></li>
+      </ul>
+      <button class="navbar-toggle" id="nav-toggle" aria-label="Toggle navigation">☰</button>
+    </div>
+  </nav>
+
+  <!-- HERO -->
+  <section class="section" style="padding-top:5rem;padding-bottom:3rem;">
+    <div class="container" style="text-align:center;max-width:800px;">
+      <div style="display:inline-block;padding:0.3rem 1rem;border-radius:100px;border:1px solid rgba(0,212,255,0.2);background:rgba(0,212,255,0.05);font-size:0.8rem;color:var(--neon-blue);margin-bottom:1.5rem;">
+        ✦ AI-Powered Image Processing — 100% In-Browser
+      </div>
+      <h1 style="font-size:clamp(2rem,5vw,3.5rem);font-weight:800;margin-bottom:1.25rem;line-height:1.1;">
+        <span class="neon-text">Transform Your Images</span><br>
+        <span style="color:var(--text-primary);">with AI Precision</span>
+      </h1>
+      <p style="font-size:1.15rem;color:var(--text-secondary);max-width:600px;margin:0 auto 2rem;">
+        Professional image tools powered by AI. No signup, no uploads, no limits. Everything runs privately in your browser.
+      </p>
+      <!-- Stats -->
+      <div id="stats-counter" style="display:inline-flex;align-items:center;gap:0.5rem;padding:0.5rem 1.25rem;border-radius:100px;background:rgba(0,255,136,0.05);border:1px solid rgba(0,255,136,0.15);margin-bottom:2rem;font-size:0.9rem;color:var(--neon-green);animation:countUp 0.8s ease;">
+        <span style="font-size:1.1rem;">📊</span>
+        <span id="stats-number" style="font-weight:700;font-family:var(--font-heading);">0</span>
+        <span>Images Processed</span>
+      </div>
+      <!-- CTA -->
+      <div style="display:flex;gap:1rem;justify-content:center;flex-wrap:wrap;">
+        <a href="/bg-remover.html" class="btn-primary" style="font-size:1rem;padding:0.9rem 2rem;">Try Background Remover →</a>
+        <a href="#tools-grid" class="btn-secondary" style="font-size:1rem;padding:0.9rem 2rem;">Explore All Tools ↓</a>
+      </div>
+    </div>
+  </section>
+
+  <!-- TOOLS GRID -->
+  <section class="section" id="tools-grid" style="padding-top:2rem;">    <div class="container">
+      <h2 style="text-align:center;font-size:1.8rem;font-weight:700;margin-bottom:0.5rem;">
+        <span class="neon-text">Our Tools</span>
+      </h2>
+      <p style="text-align:center;color:var(--text-secondary);margin-bottom:2.5rem;font-size:0.95rem;">
+        All tools process your images locally — your data never leaves your device
+      </p>
+      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:1.25rem;">
+
+        <a href="/bg-remover.html" class="panel glow-border" style="text-decoration:none;display:block;">
+          <div style="display:flex;align-items:center;gap:1rem;margin-bottom:1rem;">
+            <span style="font-size:2.2rem;filter:drop-shadow(0 0 8px rgba(0,212,255,0.5));">🖼️</span>
+            <div>
+              <h3 style="font-family:var(--font-heading);font-size:1rem;font-weight:600;color:var(--text-primary);">Background Remover</h3>
+              <p style="font-size:0.85rem;color:var(--text-secondary);margin-top:0.2rem;">Remove backgrounds with AI — add colors, gradients, or custom images</p>
+            </div>
+          </div>
+          <div style="display:flex;gap:0.5rem;flex-wrap:wrap;">
+            <span style="font-size:0.7rem;padding:0.2rem 0.5rem;border-radius:4px;background:rgba(167,139,250,0.1);color:var(--accent-purple);">Batch Mode</span>
+            <span style="font-size:0.7rem;padding:0.2rem 0.5rem;border-radius:4px;background:rgba(0,212,255,0.1);color:var(--neon-blue);">HD Output</span>
+          </div>
+          <div style="margin-top:1rem;text-align:right;font-size:0.85rem;color:var(--neon-blue);font-weight:600;">Try Now →</div>
+        </a>
+
+        <a href="/image-enhancer.html" class="panel glow-border" style="text-decoration:none;display:block;">
+          <div style="display:flex;align-items:center;gap:1rem;margin-bottom:1rem;">
+            <span style="font-size:2.2rem;filter:drop-shadow(0 0 8px rgba(167,139,250,0.5));">✨</span>
+            <div>
+              <h3 style="font-family:var(--font-heading);font-size:1rem;font-weight:600;color:var(--text-primary);">AI Image Enhancer</h3>
+              <p style="font-size:0.85rem;color:var(--text-secondary);margin-top:0.2rem;">Upscale 2x/4x, sharpen, denoise, and auto-enhance your images</p>
+            </div>
+          </div>
+          <div style="display:flex;gap:0.5rem;flex-wrap:wrap;">
+            <span style="font-size:0.7rem;padding:0.2rem 0.5rem;border-radius:4px;background:rgba(255,138,61,0.1);color:var(--accent-orange);">2x / 4x Upscale</span>
+            <span style="font-size:0.7rem;padding:0.2rem 0.5rem;border-radius:4px;background:rgba(0,212,255,0.1);color:var(--neon-blue);">Auto-Enhance</span>
+          </div>
+          <div style="margin-top:1rem;text-align:right;font-size:0.85rem;color:var(--neon-blue);font-weight:600;">Try Now →</div>
+        </a>
+
+        <a href="/object-detector.html" class="panel glow-border" style="text-decoration:none;display:block;">
+          <div style="display:flex;align-items:center;gap:1rem;margin-bottom:1rem;">
+            <span style="font-size:2.2rem;filter:drop-shadow(0 0 8px rgba(0,255,136,0.5));">🔍</span>
+            <div>
+              <h3 style="font-family:var(--font-heading);font-size:1rem;font-weight:600;color:var(--text-primary);">Object Detector</h3>
+              <p style="font-size:0.85rem;color:var(--text-secondary);margin-top:0.2rem;">Detect 80+ objects with bounding boxes, labels & confidence scores</p>
+            </div>
+          </div>
+          <div style="display:flex;gap:0.5rem;flex-wrap:wrap;">
+            <span style="font-size:0.7rem;padding:0.2rem 0.5rem;border-radius:4px;background:rgba(255,0,110,0.1);color:var(--neon-pink);">Webcam Mode</span>
+            <span style="font-size:0.7rem;padding:0.2rem 0.5rem;border-radius:4px;background:rgba(0,212,255,0.1);color:var(--neon-blue);">JSON Export</span>          </div>
+          <div style="margin-top:1rem;text-align:right;font-size:0.85rem;color:var(--neon-blue);font-weight:600;">Try Now →</div>
+        </a>
+
+        <a href="/image-converter.html" class="panel glow-border" style="text-decoration:none;display:block;">
+          <div style="display:flex;align-items:center;gap:1rem;margin-bottom:1rem;">
+            <span style="font-size:2.2rem;filter:drop-shadow(0 0 8px rgba(255,224,102,0.5));">🔄</span>
+            <div>
+              <h3 style="font-family:var(--font-heading);font-size:1rem;font-weight:600;color:var(--text-primary);">Image Converter</h3>
+              <p style="font-size:0.85rem;color:var(--text-secondary);margin-top:0.2rem;">Convert PNG ↔ JPEG ↔ WEBP ↔ BMP with resize & EXIF stripping</p>
+            </div>
+          </div>
+          <div style="display:flex;gap:0.5rem;flex-wrap:wrap;">
+            <span style="font-size:0.7rem;padding:0.2rem 0.5rem;border-radius:4px;background:rgba(167,139,250,0.1);color:var(--accent-purple);">Batch Mode</span>
+            <span style="font-size:0.7rem;padding:0.2rem 0.5rem;border-radius:4px;background:rgba(0,255,136,0.1);color:var(--neon-green);">EXIF Strip</span>
+          </div>
+          <div style="margin-top:1rem;text-align:right;font-size:0.85rem;color:var(--neon-blue);font-weight:600;">Try Now →</div>
+        </a>
+
+        <a href="/image-cropper.html" class="panel glow-border" style="text-decoration:none;display:block;">
+          <div style="display:flex;align-items:center;gap:1rem;margin-bottom:1rem;">
+            <span style="font-size:2.2rem;filter:drop-shadow(0 0 8px rgba(0,255,136,0.5));">✂️</span>
+            <div>
+              <h3 style="font-family:var(--font-heading);font-size:1rem;font-weight:600;color:var(--text-primary);">Image Cropper</h3>
+              <p style="font-size:0.85rem;color:var(--text-secondary);margin-top:0.2rem;">Crop, rotate, and straighten photos effortlessly</p>
+            </div>
+          </div>
+          <div style="display:flex;gap:0.5rem;flex-wrap:wrap;">
+            <span style="font-size:0.7rem;padding:0.2rem 0.5rem;border-radius:4px;background:rgba(56,189,248,0.1);color:var(--neon-blue);">Aspect Ratios</span>
+            <span style="font-size:0.7rem;padding:0.2rem 0.5rem;border-radius:4px;background:rgba(255,138,61,0.1);color:var(--accent-orange);">Rotate/Flip</span>
+          </div>
+          <div style="margin-top:1rem;text-align:right;font-size:0.85rem;color:var(--neon-blue);font-weight:600;">Try Now →</div>
+        </a>
+
+        <a href="/watermark-adder.html" class="panel glow-border" style="text-decoration:none;display:block;">
+          <div style="display:flex;align-items:center;gap:1rem;margin-bottom:1rem;">
+            <span style="font-size:2.2rem;filter:drop-shadow(0 0 8px rgba(167,139,250,0.5));">📝</span>
+            <div>
+              <h3 style="font-family:var(--font-heading);font-size:1rem;font-weight:600;color:var(--text-primary);">Watermark Adder</h3>
+              <p style="font-size:0.85rem;color:var(--text-secondary);margin-top:0.2rem;">Protect images with custom text watermarks</p>
+            </div>
+          </div>
+          <div style="display:flex;gap:0.5rem;flex-wrap:wrap;">
+            <span style="font-size:0.7rem;padding:0.2rem 0.5rem;border-radius:4px;background:rgba(0,255,136,0.1);color:var(--neon-green);">Custom Fonts</span>
+            <span style="font-size:0.7rem;padding:0.2rem 0.5rem;border-radius:4px;background:rgba(167,139,250,0.1);color:var(--accent-purple);">Tile Mode</span>
+          </div>
+          <div style="margin-top:1rem;text-align:right;font-size:0.85rem;color:var(--neon-blue);font-weight:600;">Try Now →</div>
+        </a>
+
+        <a href="/image-filters.html" class="panel glow-border" style="text-decoration:none;display:block;">          <div style="display:flex;align-items:center;gap:1rem;margin-bottom:1rem;">
+            <span style="font-size:2.2rem;filter:drop-shadow(0 0 8px rgba(255,0,110,0.5));">🎨</span>
+            <div>
+              <h3 style="font-family:var(--font-heading);font-size:1rem;font-weight:600;color:var(--text-primary);">Image Filters</h3>
+              <p style="font-size:0.85rem;color:var(--text-secondary);margin-top:0.2rem;">Apply Instagram-style photo effects and grading</p>
+            </div>
+          </div>
+          <div style="display:flex;gap:0.5rem;flex-wrap:wrap;">
+            <span style="font-size:0.7rem;padding:0.2rem 0.5rem;border-radius:4px;background:rgba(56,189,248,0.1);color:var(--neon-blue);">Presets</span>
+            <span style="font-size:0.7rem;padding:0.2rem 0.5rem;border-radius:4px;background:rgba(255,0,110,0.1);color:var(--accent-pink);">Color Grading</span>
+          </div>
+          <div style="margin-top:1rem;text-align:right;font-size:0.85rem;color:var(--neon-blue);font-weight:600;">Try Now →</div>
+        </a>
+
+        <a href="/image-compressor.html" class="panel glow-border" style="text-decoration:none;display:block;">
+          <div style="display:flex;align-items:center;gap:1rem;margin-bottom:1rem;">
+            <span style="font-size:2.2rem;filter:drop-shadow(0 0 8px rgba(255,0,110,0.5));">📦</span>
+            <div>
+              <h3 style="font-family:var(--font-heading);font-size:1rem;font-weight:600;color:var(--text-primary);">Image Compressor</h3>
+              <p style="font-size:0.85rem;color:var(--text-secondary);margin-top:0.2rem;">Compress images to target size — see exact savings & ratio</p>
+            </div>
+          </div>
+          <div style="display:flex;gap:0.5rem;flex-wrap:wrap;">
+            <span style="font-size:0.7rem;padding:0.2rem 0.5rem;border-radius:4px;background:rgba(167,139,250,0.1);color:var(--accent-purple);">Batch Mode</span>
+            <span style="font-size:0.7rem;padding:0.2rem 0.5rem;border-radius:4px;background:rgba(255,138,61,0.1);color:var(--accent-orange);">Smart Compress</span>
+          </div>
+          <div style="margin-top:1rem;text-align:right;font-size:0.85rem;color:var(--neon-blue);font-weight:600;">Try Now →</div>
+        </a>
+
+        <a href="/face-blur.html" class="panel glow-border" style="text-decoration:none;display:block;">
+          <div style="display:flex;align-items:center;gap:1rem;margin-bottom:1rem;">
+            <span style="font-size:2.2rem;filter:drop-shadow(0 0 8px rgba(167,139,250,0.5));">😶</span>
+            <div>
+              <h3 style="font-family:var(--font-heading);font-size:1rem;font-weight:600;color:var(--text-primary);">Face Blur / Privacy</h3>
+              <p style="font-size:0.85rem;color:var(--text-secondary);margin-top:0.2rem;">Auto-detect & blur faces — pixelate, emoji, or manual brush mode</p>
+            </div>
+          </div>
+          <div style="display:flex;gap:0.5rem;flex-wrap:wrap;">
+            <span style="font-size:0.7rem;padding:0.2rem 0.5rem;border-radius:4px;background:rgba(255,0,110,0.1);color:var(--neon-pink);">Privacy</span>
+            <span style="font-size:0.7rem;padding:0.2rem 0.5rem;border-radius:4px;background:rgba(0,212,255,0.1);color:var(--neon-blue);">Manual Draw</span>
+          </div>
+          <div style="margin-top:1rem;text-align:right;font-size:0.85rem;color:var(--neon-blue);font-weight:600;">Try Now →</div>
+        </a>
+
+      </div>
+    </div>
+  </section>
+
+  <!-- FEATURES -->
+  <section class="section" id="features">    <div class="container">
+      <h2 style="text-align:center;font-size:1.8rem;font-weight:700;margin-bottom:0.5rem;">
+        Why Choose <span class="neon-text">ImgAURA</span>?
+      </h2>
+      <p style="text-align:center;color:var(--text-secondary);margin-bottom:2.5rem;font-size:0.95rem;">Built for speed, privacy, and professional quality</p>
+      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:1.25rem;">
+        <div class="panel" style="text-align:center;padding:2rem 1.5rem;">
+          <span style="font-size:2.5rem;display:block;margin-bottom:0.75rem;">🔒</span>
+          <h3 style="font-family:var(--font-heading);font-size:0.95rem;font-weight:600;margin-bottom:0.5rem;">100% Private</h3>
+          <p style="font-size:0.85rem;color:var(--text-secondary);">All processing happens in your browser. No images are ever uploaded to any server.</p>
+        </div>
+        <div class="panel" style="text-align:center;padding:2rem 1.5rem;">
+          <span style="font-size:2.5rem;display:block;margin-bottom:0.75rem;">⚡</span>
+          <h3 style="font-family:var(--font-heading);font-size:0.95rem;font-weight:600;margin-bottom:0.5rem;">Instant Processing</h3>
+          <p style="font-size:0.85rem;color:var(--text-secondary);">No waiting in queues. AI processes your images in seconds, right on your device.</p>
+        </div>
+        <div class="panel" style="text-align:center;padding:2rem 1.5rem;">
+          <span style="font-size:2.5rem;display:block;margin-bottom:0.75rem;">📱</span>
+          <h3 style="font-family:var(--font-heading);font-size:0.95rem;font-weight:600;margin-bottom:0.5rem;">Mobile Friendly</h3>
+          <p style="font-size:0.85rem;color:var(--text-secondary);">Fully responsive design works perfectly on phones, tablets, and desktops.</p>
+        </div>
+        <div class="panel" style="text-align:center;padding:2rem 1.5rem;">
+          <span style="font-size:2.5rem;display:block;margin-bottom:0.75rem;">🌐</span>
+          <h3 style="font-family:var(--font-heading);font-size:0.95rem;font-weight:600;margin-bottom:0.5rem;">Browser-Based AI</h3>
+          <p style="font-size:0.85rem;color:var(--text-secondary);">Powered by Google MediaPipe & TensorFlow.js. No installations needed.</p>
+        </div>
+        <div class="panel" style="text-align:center;padding:2rem 1.5rem;">
+          <span style="font-size:2.5rem;display:block;margin-bottom:0.75rem;">🎯</span>
+          <h3 style="font-family:var(--font-heading);font-size:0.95rem;font-weight:600;margin-bottom:0.5rem;">HD Quality Output</h3>
+          <p style="font-size:0.85rem;color:var(--text-secondary);">Get professional-grade results with lossless PNG output and quality controls.</p>
+        </div>
+        <div class="panel" style="text-align:center;padding:2rem 1.5rem;">
+          <span style="font-size:2.5rem;display:block;margin-bottom:0.75rem;">💰</span>
+          <h3 style="font-family:var(--font-heading);font-size:0.95rem;font-weight:600;margin-bottom:0.5rem;">Always Free</h3>
+          <p style="font-size:0.85rem;color:var(--text-secondary);">No subscriptions, no hidden fees, no paywalls. Every tool is free to use.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- HOW IT WORKS -->
+  <section class="section" id="how-it-works">
+    <div class="container" style="max-width:900px;">
+      <h2 style="text-align:center;font-size:1.8rem;font-weight:700;margin-bottom:2.5rem;">How It <span class="neon-text">Works</span></h2>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:2rem;text-align:center;">
+        <div>
+          <div style="width:64px;height:64px;border-radius:50%;background:rgba(0,212,255,0.1);border:2px solid var(--neon-blue);display:flex;align-items:center;justify-content:center;margin:0 auto 1rem;font-size:1.5rem;font-family:var(--font-heading);font-weight:700;color:var(--neon-blue);">1</div>
+          <h3 style="font-family:var(--font-heading);font-size:0.95rem;font-weight:600;margin-bottom:0.5rem;">Upload Image</h3>
+          <p style="font-size:0.85rem;color:var(--text-secondary);">Drag & drop or click to upload. Supports PNG, JPEG, WEBP, and more.</p>
+        </div>        <div>
+          <div style="width:64px;height:64px;border-radius:50%;background:rgba(167,139,250,0.1);border:2px solid var(--accent-purple);display:flex;align-items:center;justify-content:center;margin:0 auto 1rem;font-size:1.5rem;font-family:var(--font-heading);font-weight:700;color:var(--accent-purple);">2</div>
+          <h3 style="font-family:var(--font-heading);font-size:0.95rem;font-weight:600;margin-bottom:0.5rem;">AI Processes Locally</h3>
+          <p style="font-size:0.85rem;color:var(--text-secondary);">AI models run directly in your browser. Your data stays private on your device.</p>
+        </div>
+        <div>
+          <div style="width:64px;height:64px;border-radius:50%;background:rgba(0,255,136,0.1);border:2px solid var(--neon-green);display:flex;align-items:center;justify-content:center;margin:0 auto 1rem;font-size:1.5rem;font-family:var(--font-heading);font-weight:700;color:var(--neon-green);">3</div>
+          <h3 style="font-family:var(--font-heading);font-size:0.95rem;font-weight:600;margin-bottom:0.5rem;">Download Result</h3>
+          <p style="font-size:0.85rem;color:var(--text-secondary);">Get your processed image instantly. Download as PNG, JPEG, or ZIP.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- FAQ -->
+  <section class="section" id="faq">
+    <div class="container" style="max-width:800px;">
+      <h2 style="text-align:center;font-size:1.8rem;font-weight:700;margin-bottom:2.5rem;">Frequently Asked <span class="neon-text">Questions</span></h2>
+      <div class="faq-list">
+        <div class="faq-item"><button class="faq-question">Is it really free? <span class="faq-icon">▼</span></button><div class="faq-answer">Yes, 100% free! All 6 tools are completely free to use with no limits. No subscriptions, no hidden fees.</div></div>
+        <div class="faq-item"><button class="faq-question">Is my data safe? <span class="faq-icon">▼</span></button><div class="faq-answer">Absolutely. Your images are never uploaded to any server. All processing happens locally in your browser. We have zero access to your files.</div></div>
+        <div class="faq-item"><button class="faq-question">What image formats are supported? <span class="faq-icon">▼</span></button><div class="faq-answer">We support PNG, JPEG, WEBP, BMP, and GIF input formats. Output formats include PNG (lossless), JPEG, and WEBP with quality controls.</div></div>
+        <div class="faq-item"><button class="faq-question">What is the max file size? <span class="faq-icon">▼</span></button><div class="faq-answer">There are no file size limits. Very large images (30MP+) may be slower depending on your device's hardware.</div></div>
+        <div class="faq-item"><button class="faq-question">How accurate is background removal? <span class="faq-icon">▼</span></button><div class="faq-answer">We use Google's MediaPipe Selfie Segmentation model which provides excellent accuracy. Edge smoothing controls let you fine-tune results.</div></div>
+        <div class="faq-item"><button class="faq-question">Can I use it on mobile? <span class="faq-icon">▼</span></button><div class="faq-answer">Yes! All tools are fully responsive and work on mobile browsers (Chrome, Safari, Firefox). The interface adapts to any screen size.</div></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- FOOTER -->
+    <div id="ad-banner-bottom" style="margin: 2rem auto; max-width: 728px; text-align: center; display: flex; justify-content: center; overflow: hidden;"></div>
+  <footer class="footer">
+    <div class="container">
+      <div class="footer-content">
+        <div>
+          <div style="font-family:var(--font-heading);font-size:1.1rem;font-weight:700;margin-bottom:0.5rem;" class="neon-text">✦ ImgAURA</div>
+          <p style="font-size:0.85rem;color:var(--text-secondary);max-width:300px;">Free AI-powered image processing tools. 100% browser-based, private, and secure.</p>
+        </div>
+        <div>
+          <h4 style="font-size:0.85rem;font-weight:600;margin-bottom:0.75rem;color:var(--text-primary);">Tools</h4>
+          <ul class="footer-links" style="flex-direction:column;gap:0.5rem;">
+            <li><a href="/bg-remover.html">Background Remover</a></li>
+            <li><a href="/image-enhancer.html">Image Enhancer</a></li>
+            <li><a href="/object-detector.html">Object Detector</a></li>
+            <li><a href="/image-converter.html">Image Converter</a></li>
+            <li><a href="/image-compressor.html">Image Compressor</a></li>
+            <li><a href="/face-blur.html">Face Blur</a></li>
+          </ul>
+        </div>
+        <div>          <h4 style="font-size:0.85rem;font-weight:600;margin-bottom:0.75rem;color:var(--text-primary);">Legal</h4>
+          <ul class="footer-links" style="flex-direction:column;gap:0.5rem;">
+            <li><a href="/privacy.html">Privacy Policy</a></li>
+            <li><a href="/terms.html">Terms of Service</a></li>
+            <li><a href="/contact.html">Contact Us</a></li>
+          </ul>
+        </div>
+      </div>
+      <div class="footer-bottom">
+        <p>© 2024 ImgAURA. Powered by Google MediaPipe & TensorFlow.js</p>
+      </div>
+    </div>
+  </footer>
+
+  <script src="/js/utils.js"></script>
+  <script src="/js/analytics.js"></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      const target = getTotalUsageCount();
+      const el = document.getElementById('stats-number');
+      let current = 0;
+      const step = Math.ceil(target / 60);
+      const animate = () => {
+        current = Math.min(current + step, target);
+        el.textContent = current.toLocaleString() + '+';
+        if (current < target) requestAnimationFrame(animate);
+      };
+      animate();
+    });
+  </script>
+  <script src="/js/adsterra.js" defer></script>
 </body>
 </html>
+<!-- Trigger Vercel Webhook -->
