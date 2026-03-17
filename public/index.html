@@ -5,32 +5,58 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Background Remover API</title>
   <style>
-    body { font-family: system-ui; max-width: 800px; margin: 2rem auto; padding: 0 1rem; line-height: 1.6; }
-    #output { max-width: 100%; border: 1px solid #ddd; margin: 1rem 0; display: none; }
-    #download { display: none; margin: 1rem 0; }
-    #status { margin: 1rem 0; padding: 0.75rem; background: #f8f9fa; border-radius: 6px; border-left: 4px solid #007bff; white-space: pre-wrap; }
-    .error { border-left-color: #dc3545; background: #fff5f5; }
-    .success { border-left-color: #28a745; background: #f0fff4; }
-    button { padding: 0.6rem 1.2rem; margin: 0.25rem; cursor: pointer; background: #007bff; color: white; border: none; border-radius: 4px; }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: system-ui, sans-serif; max-width: 800px; margin: 2rem auto; padding: 1rem; line-height: 1.6; }
+    .container { text-align: center; }
+    #dropZone { 
+      border: 3px dashed #007bff; border-radius: 12px; padding: 3rem 2rem; 
+      margin: 1.5rem 0; cursor: pointer; transition: all 0.2s; background: #f8f9fa;
+    }
+    #dropZone:hover, #dropZone.dragover { border-color: #0056b3; background: #e9ecef; }
+    #preview { display: flex; gap: 1rem; flex-wrap: wrap; justify-content: center; margin: 1rem 0; }
+    .image-box { text-align: center; }
+    .image-box img { max-width: 100%; max-height: 300px; border-radius: 8px; border: 1px solid #ddd; }
+    #status { margin: 1rem 0; padding: 0.75rem; border-radius: 6px; background: #f8f9fa; }
+    .error { background: #fff5f5; border-left: 4px solid #dc3545; }
+    .success { background: #f0fff4; border-left: 4px solid #28a745; }
+    .loading { background: #e7f3ff; border-left: 4px solid #007bff; }
+    button { 
+      padding: 0.75rem 1.5rem; background: #007bff; color: white; border: none; 
+      border-radius: 6px; cursor: pointer; font-size: 1rem; margin: 0.25rem;
+    }
     button:disabled { background: #ccc; cursor: not-allowed; }
-    #progress { height: 8px; background: #e9ecef; border-radius: 4px; margin: 0.5rem 0; overflow: hidden; display: none; }
-    #progress-bar { height: 100%; width: 0%; background: #007bff; transition: width 0.2s; }
+    button:hover:not(:disabled) { background: #0056b3; }
+    #download { display: none; margin-top: 1rem; }
+    #progress { height: 6px; background: #e9ecef; border-radius: 3px; margin: 0.5rem 0; overflow: hidden; display: none; }
+    #progressBar { height: 100%; width: 0%; background: #007bff; transition: width 0.3s; }
+    .hidden { display: none !important; }
   </style>
 </head>
 <body>
-  <h1>🎨 Background Remover API</h1>
-  <p>Powered by Transformers.js + RMBG-1.4</p>
-  
-  <button id="loadModel">🚀 Load AI Model (~170MB)</button>
-  <input type="file" id="upload" accept="image/*" disabled />
-  
-  <div id="status">Click "Load AI Model" to start</div>
-  <div id="progress"><div id="progress-bar"></div></div>
-  
-  <canvas id="output"></canvas>
-  <a id="download" download="no-bg.png"><button>⬇️ Download PNG</button></a>
+  <div class="container">
+    <h1>🎨 Background Remover API</h1>
+    <p>Powered by @imgly/background-removal • 100% client-side • Free on Vercel</p>
+    
+    <div id="dropZone">
+      <p>📁 Drag & drop an image here<br><small>or click to browse</small></p>
+      <input type="file" id="fileInput" accept="image/*" class="hidden" />
+    </div>
+    
+    <div id="status">Ready to remove backgrounds ✨</div>
+    <div id="progress"><div id="progressBar"></div></div>
+    
+    <div id="preview"></div>
+    
+    <a id="download" download="no-bg.png">
+      <button>⬇️ Download PNG</button>
+    </a>
+    
+    <p style="margin-top: 2rem; font-size: 0.9rem; color: #666;">
+      🔒 All processing happens in your browser - images never leave your device
+    </p>
+  </div>
 
-  <!-- ✅ CRITICAL FIX: Load the app.js module -->
+  <!-- ✅ Load the app -->
   <script type="module" src="/app.js"></script>
 </body>
 </html>
