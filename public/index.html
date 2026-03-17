@@ -8,7 +8,7 @@
     body { font-family: system-ui; max-width: 800px; margin: 2rem auto; padding: 0 1rem; }
     #output { max-width: 100%; border: 1px solid #ddd; margin: 1rem 0; display: none; }
     #download { display: none; margin: 1rem 0; }
-    #status { margin: 1rem 0; padding: 0.75rem; background: #f8f9fa; border-radius: 6px; border-left: 4px solid #007bff; }
+    #status { margin: 1rem 0; padding: 0.75rem; background: #f8f9fa; border-radius: 6px; border-left: 4px solid #007bff; white-space: pre-wrap; }
     .error { border-left-color: #dc3545; background: #fff5f5; }
     .success { border-left-color: #28a745; background: #f0fff4; }
     button { padding: 0.6rem 1.2rem; margin: 0.25rem; cursor: pointer; background: #007bff; color: white; border: none; border-radius: 4px; }
@@ -31,32 +31,37 @@
   <a id="download" download="no-bg.png"><button>⬇️ Download PNG</button></a>
 
   <script type="module">
-    // ✅ Use correct import
+    // ✅ CRITICAL: Import with correct CDN version
     import { AutoModel, AutoProcessor, env, RawImage } from 'https://cdn.jsdelivr.net/npm/@huggingface/transformers@3.0.0';
 
-    // Critical config for browser loading
+    // 🎯 FIX #1: Configure ONNX WASM paths BEFORE loading model
     env.allowLocalModels = false;
     env.useBrowserCache = true;
-    env.backends.onnx.wasm.proxy = true;
+    
+    // 🔑 THIS IS THE KEY FIX - Tell ONNX where to find WASM files
+    env.backends.onnx.wasm.wasmPaths = 'https://cdn.jsdelivr.net/npm/onnxruntime-web@1.19.0/dist/';
+    env.backends.onnx.wasm.proxy = true; // Use proxy mode for better compatibility
 
     let model = null, processor = null;
 
     async function initModel() {
       const loadBtn = document.getElementById('loadModel');
       const status = document.getElementById('status');
-      const progress = document.getElementById('progress');
-      const progressBar = document.getElementById('progress-bar');
+      const progress = document.getElementById('progress');      const progressBar = document.getElementById('progress-bar');
       
-      loadBtn.disabled = true;      status.textContent = '⏳ Loading model...';
+      loadBtn.disabled = true;
+      status.textContent = '⏳ Loading model...';
+      status.className = '';
       progress.style.display = 'block';
 
       try {
-        // ✅ Use AutoModel + AutoProcessor (NOT pipeline)
-        // RMBG-1.4 has custom architecture - pipeline() doesn't support it [[50]]
+        // ✅ FIX #2: Use from_pretrained with quantized model for faster load
         model = await AutoModel.from_pretrained('briaai/RMBG-1.4', {
+          // Use quantized version if available (smaller + faster)
+          quantized: true,
           progress_callback: (data) => {
-            if (data?.progress) {
-              progressBar.style.width = `${data.progress}%`;
+            if (data?.status === 'progress' && data?.progress) {
+              progressBar.style.width = `${Math.min(100, data.progress)}%`;
               status.textContent = `⏳ Loading: ${Math.round(data.progress)}%`;
             }
           }
@@ -73,7 +78,13 @@
       } catch (err) {
         console.error('Model error:', err);
         progress.style.display = 'none';
-        status.textContent = `❌ ${err.message || 'Load failed'}`;
+        
+        // ✅ FIX #3: Better error messages for WASM issues
+        let msg = err.message || 'Load failed';
+        if (msg.includes('backend') || msg.includes('wasm')) {
+          msg = '❌ WASM backend failed to load.\n\nTry:\n• Use Chrome/Edge (not Safari)\n• Disable ad-blockers\n• Check internet connection\n• Try incognito mode';
+        }
+        status.textContent = msg;
         status.className = 'error';
         loadBtn.disabled = false;
       }
@@ -85,33 +96,37 @@
       const file = e.target.files?.[0];
       if (!file || !model || !processor) return;
 
-      const status = document.getElementById('status');
-      status.textContent = '🔄 Processing...';
+      const status = document.getElementById('status');      status.textContent = '🔄 Processing...';
+      status.className = '';
 
       try {
-        // Load and preprocess image
+        // Load image
         const image = await RawImage.fromURL(URL.createObjectURL(file));
+        
+        // Preprocess
         const inputs = await processor(image);
-
-        // ✅ Run inference with proper output handling
+        
+        // ✅ Run inference
         const { output } = await model(inputs);
         
-        // Post-process: resize mask to original size + apply alpha        const mask = await RawImage.fromTensor(output[0].mul(255).to('uint8')).resize(image.width, image.height);
+        // Post-process mask
+        const mask = await RawImage.fromTensor(
+          output[0].mul(255).to('uint8')
+        ).resize(image.width, image.height);
         
-        // Create canvas result
+        // Create canvas
         const canvas = document.getElementById('output');
         const ctx = canvas.getContext('2d');
         canvas.width = image.width;
         canvas.height = image.height;
         canvas.style.display = 'block';
 
-        // Draw original image
+        // Draw image + apply alpha mask
         ctx.drawImage(image.toCanvas(), 0, 0);
-        
-        // Apply alpha mask
         const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+        
         for (let i = 0; i < mask.data.length; i++) {
-          imageData.data[i * 4 + 3] = mask.data[i]; // Set alpha channel
+          imageData.data[i * 4 + 3] = mask.data[i];
         }
         ctx.putImageData(imageData, 0, 0);
 
@@ -119,7 +134,7 @@
         const download = document.getElementById('download');
         download.href = canvas.toDataURL('image/png');
         download.style.display = 'inline-block';
-        status.textContent = '✨ Done! Download ready.';
+        status.textContent = '✨ Done! Click to download.';
         status.className = 'success';
 
       } catch (err) {
@@ -128,6 +143,25 @@
         status.className = 'error';
       }
     });
+
+    // ✅ FIX #4: Pre-check WASM support on page load
+    async function checkWASMSupport() {      if (typeof WebAssembly !== 'object') {
+        document.getElementById('status').textContent = '❌ WebAssembly not supported';
+        return false;
+      }
+      
+      // Test WASM instantiation
+      try {
+        const wasmCheck = new WebAssembly.Module(
+          new Uint8Array([0,97,115,109,1,0,0,0])
+        );
+        return true;
+      } catch {
+        document.getElementById('status').textContent = '⚠️ WASM compilation issues detected';
+        return false;
+      }
+    }
+    checkWASMSupport();
   </script>
 </body>
 </html>
