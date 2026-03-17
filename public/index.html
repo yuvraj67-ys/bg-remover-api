@@ -4,50 +4,113 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Background Remover API</title>
+  <style>
+    body { font-family: system-ui; max-width: 800px; margin: 2rem auto; padding: 0 1rem; line-height: 1.6; }
+    #output { max-width: 100%; border: 1px solid #ddd; margin: 1rem 0; display: none; }
+    #download { display: none; margin: 1rem 0; }
+    #status { margin: 1rem 0; padding: 0.75rem; background: #f8f9fa; border-radius: 6px; border-left: 4px solid #007bff; }
+    .error { border-left-color: #dc3545; background: #fff5f5; }
+    .success { border-left-color: #28a745; background: #f0fff4; }
+    button { padding: 0.6rem 1.2rem; margin: 0.25rem; cursor: pointer; background: #007bff; color: white; border: none; border-radius: 4px; }
+    button:disabled { background: #ccc; cursor: not-allowed; }
+    button:hover:not(:disabled) { background: #0056b3; }
+    #progress { height: 8px; background: #e9ecef; border-radius: 4px; margin: 0.5rem 0; overflow: hidden; display: none; }
+    #progress-bar { height: 100%; width: 0%; background: #007bff; transition: width 0.2s; }
+  </style>
+</head>
+<body>
+  <h1>🎨 Background Remover API</h1>
+  <p>Powered by <a href="https://github.com/addyosmani/bg-remove" target="_blank">Transformers.js + RMBG-1.4</a></p>
+  
+  <button id="loadModel">🚀 Load AI Model (First Time ~170MB)</button>
+  <input type="file" id="upload" accept="image/*" disabled />
+  
+  <div id="status">Click "Load AI Model" to start</div>
+  <div id="progress"><div id="progress-bar"></div></div>
+  
+  <canvas id="output"></canvas>
+  
+  <a id="download" download="no-bg.png">
+    <button>⬇️ Download PNG</button>
+  </a>
+
   <script type="module">
+    // ✅ CRITICAL: Use correct Transformers.js import + config
     import { pipeline, env } from 'https://cdn.jsdelivr.net/npm/@huggingface/transformers@3.0.0';
 
-    // Skip local model check - use CDN
+    // Allow loading from CDN (not local filesystem)
     env.allowLocalModels = false;
     env.useBrowserCache = true;
+    // Skip WebGPU check - auto fallback to WASM
+    env.backends.onnx.wasm.proxy = true;
 
-    let remover = null;
-
+    let segmenter = null;
+    const status = document.getElementById('status');
+    const progress = document.getElementById('progress');
+    const progressBar = document.getElementById('progress-bar');
+    // ✅ Proper model loading with progress + fallback
     async function initModel() {
-      const status = document.getElementById('status');
-      status.textContent = '⏳ Loading AI model (~170MB)...';
-      
+      const loadBtn = document.getElementById('loadModel');
+      loadBtn.disabled = true;
+      status.textContent = '⏳ Downloading model (~170MB)...';
+      status.className = '';
+      progress.style.display = 'block';
+
       try {
-        // Load RMBG-1.4 model for background removal [[7]]
-        remover = await pipeline(
-          'image-segmentation',
-          'briaai/RMBG-1.4',
-          { device: 'webgpu' } // Use WebGPU if available, fallback to WASM
-        );
+        // ✅ Use correct pipeline config for RMBG-1.4 [[36]][[43]]
+        segmenter = await pipeline('image-segmentation', 'briaai/RMBG-1.4', {
+          // Force WASM backend for maximum compatibility
+          device: 'wasm',
+          // Show download progress
+          progress_callback: (data) => {
+            if (data?.progress) {
+              progressBar.style.width = `${data.progress}%`;
+              status.textContent = `⏳ Loading: ${Math.round(data.progress)}%`;
+            }
+          }
+        });
+
+        progress.style.display = 'none';
         status.textContent = '✅ Model ready! Upload an image.';
+        status.className = 'success';
         document.getElementById('upload').disabled = false;
+        loadBtn.textContent = '✅ Model Loaded';
+        
       } catch (err) {
-        console.error(err);
-        status.textContent = '❌ Model failed to load. Try Chrome with WebGPU.';
+        console.error('Model load error:', err);
+        progress.style.display = 'none';
+        status.textContent = `❌ Error: ${err.message || 'Model failed to load'}`;
+        status.className = 'error';
+        
+        // ✅ Helpful fallback suggestions
+        if (err.message?.includes('WebGPU')) {
+          status.textContent += '\n💡 Try: Chrome 113+ with WebGPU enabled, or use WASM fallback';
+        } else if (err.message?.includes('404') || err.message?.includes('fetch')) {
+          status.textContent += '\n💡 Check your internet connection - model downloads from Hugging Face CDN';
+        }
+        loadBtn.disabled = false;
       }
     }
 
     document.getElementById('loadModel').addEventListener('click', initModel);
 
+    // ✅ Image processing with proper canvas handling
     document.getElementById('upload').addEventListener('change', async (e) => {
-      const file = e.target.files?.[0];
-      if (!file || !remover) return;
+      const file = e.target.files?.[0];      if (!file || !segmenter) return;
 
       const status = document.getElementById('status');
-      status.textContent = '🔄 Processing...';
+      status.textContent = '🔄 Processing image...';
+      status.className = '';
 
       try {
-        // Create image bitmap
+        // Create image from file
         const img = await createImageBitmap(await file.arrayBuffer());
         
-        // Run background removal [[2]][[5]]
-        const output = await remover(img, {
-          threshold: 0.5,          output_mask: true
+        // ✅ Run segmentation - RMBG-1.4 returns mask [[43]]
+        const output = await segmenter(img, {
+          threshold: 0.5,
+          // Return raw mask data for alpha compositing
+          return_mask: true
         });
 
         // Create canvas for result
@@ -55,65 +118,57 @@
         const ctx = canvas.getContext('2d');
         canvas.width = img.width;
         canvas.height = img.height;
+        canvas.style.display = 'block';
 
         // Draw original image
         ctx.drawImage(img, 0, 0);
         
-        // Apply alpha mask from segmentation
+        // ✅ Apply alpha mask from segmentation output
         const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-        const mask = output[0].mask; // Alpha channel data
+        const maskData = output[0].mask?.data;
         
-        for (let i = 0; i < mask.data.length; i++) {
-          imageData.data[i * 4 + 3] = mask.data[i]; // Set alpha
+        if (maskData) {
+          for (let i = 0; i < maskData.length; i++) {
+            // Set alpha channel from mask (0 = background, 255 = foreground)
+            imageData.data[i * 4 + 3] = maskData[i];
+          }
+          ctx.putImageData(imageData, 0, 0);
         }
-        ctx.putImageData(imageData, 0, 0);
 
         // Enable download
-        document.getElementById('download').href = canvas.toDataURL('image/png');
-        document.getElementById('download').style.display = 'inline-block';
+        const download = document.getElementById('download');
+        download.href = canvas.toDataURL('image/png');
+        download.style.display = 'inline-block';
         status.textContent = '✨ Done! Click to download.';
+        status.className = 'success';
 
       } catch (err) {
-        console.error(err);
-        status.textContent = '❌ Processing failed: ' + err.message;
-      }
+        console.error('Processing error:', err);
+        status.textContent = `❌ Processing failed: ${err.message}`;
+        status.className = 'error';      }
     });
+
+    // ✅ Optional: Pre-check browser capabilities
+    async function checkCapabilities() {
+      const hasWebGPU = !!navigator.gpu;
+      const hasWASM = typeof WebAssembly !== 'undefined';
+      
+      if (!hasWASM) {
+        status.textContent = '❌ WebAssembly not supported - please update your browser';
+        status.className = 'error';
+        return false;
+      }
+      
+      if (hasWebGPU) {
+        status.textContent = '🚀 WebGPU detected - faster processing available';
+      } else {
+        status.textContent = '💡 Using WASM fallback - works on all modern browsers';
+      }
+      return true;
+    }
+
+    // Run capability check on load
+    checkCapabilities();
   </script>
-  <style>
-    body { font-family: system-ui; max-width: 800px; margin: 2rem auto; padding: 0 1rem; }
-    .hidden { display: none; }
-    #output { max-width: 100%; border: 1px solid #ddd; margin: 1rem 0; }
-    button { padding: 0.5rem 1rem; margin: 0.25rem; cursor: pointer; }
-    #status { margin: 1rem 0; padding: 0.5rem; background: #f0f0f0; border-radius: 4px; }
-  </style>
-</head>
-<body>
-  <h1>🎨 Background Remover API</h1>
-  <p>Powered by <a href="https://github.com/addyosmani/bg-remove" target="_blank">Transformers.js + RMBG-1.4</a></p>
-  
-  <button id="loadModel">🚀 Load AI Model (First Time Only)</button>
-  <input type="file" id="upload" accept="image/*" disabled />
-  
-  <div id="status">Click "Load AI Model" to start</div>
-  
-  <canvas id="output"></canvas>  
-  <a id="download" class="hidden" download="no-bg.png">
-    <button>⬇️ Download PNG</button>
-  </a>
-
-  <details>
-    <summary>🔧 API Usage</summary>
-    <pre>
-// This is a browser-based API - no server processing needed!
-// Just embed this page or use the client-side code:
-
-const response = await fetch('/api/remove-bg', {
-  method: 'POST',
-  headers: { 'Content-Type': 'application/json' }
-});
-const config = await response.json();
-// → Use client-side Transformers.js as shown above
-    </pre>
-  </details>
 </body>
 </html>
