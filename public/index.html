@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Background Remover API</title>
   <style>
-    body { font-family: system-ui; max-width: 800px; margin: 2rem auto; padding: 0 1rem; }
+    body { font-family: system-ui; max-width: 800px; margin: 2rem auto; padding: 0 1rem; line-height: 1.6; }
     #output { max-width: 100%; border: 1px solid #ddd; margin: 1rem 0; display: none; }
     #download { display: none; margin: 1rem 0; }
     #status { margin: 1rem 0; padding: 0.75rem; background: #f8f9fa; border-radius: 6px; border-left: 4px solid #007bff; white-space: pre-wrap; }
@@ -30,7 +30,7 @@
   <canvas id="output"></canvas>
   <a id="download" download="no-bg.png"><button>⬇️ Download PNG</button></a>
 
-  <!-- ✅ Load compiled TypeScript -->
-  <script type="module" src="/js/app.js"></script>
+  <!-- ✅ CRITICAL FIX: Load the app.js module -->
+  <script type="module" src="/app.js"></script>
 </body>
 </html>
