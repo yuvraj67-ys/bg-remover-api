@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Background Remover API</title>
+  <script type="module">
+    import { pipeline, env } from 'https://cdn.jsdelivr.net/npm/@huggingface/transformers@3.0.0';
+
+    // Skip local model check - use CDN
+    env.allowLocalModels = false;
+    env.useBrowserCache = true;
+
+    let remover = null;
+
+    async function initModel() {
+      const status = document.getElementById('status');
+      status.textContent = '⏳ Loading AI model (~170MB)...';
+      
+      try {
+        // Load RMBG-1.4 model for background removal [[7]]
+        remover = await pipeline(
+          'image-segmentation',
+          'briaai/RMBG-1.4',
+          { device: 'webgpu' } // Use WebGPU if available, fallback to WASM
+        );
+        status.textContent = '✅ Model ready! Upload an image.';
+        document.getElementById('upload').disabled = false;
+      } catch (err) {
+        console.error(err);
+        status.textContent = '❌ Model failed to load. Try Chrome with WebGPU.';
+      }
+    }
+
+    document.getElementById('loadModel').addEventListener('click', initModel);
+
+    document.getElementById('upload').addEventListener('change', async (e) => {
+      const file = e.target.files?.[0];
+      if (!file || !remover) return;
+
+      const status = document.getElementById('status');
+      status.textContent = '🔄 Processing...';
+
+      try {
+        // Create image bitmap
+        const img = await createImageBitmap(await file.arrayBuffer());
+        
+        // Run background removal [[2]][[5]]
+        const output = await remover(img, {
+          threshold: 0.5,          output_mask: true
+        });
+
+        // Create canvas for result
+        const canvas = document.getElementById('output');
+        const ctx = canvas.getContext('2d');
+        canvas.width = img.width;
+        canvas.height = img.height;
+
+        // Draw original image
+        ctx.drawImage(img, 0, 0);
+        
+        // Apply alpha mask from segmentation
+        const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+        const mask = output[0].mask; // Alpha channel data
+        
+        for (let i = 0; i < mask.data.length; i++) {
+          imageData.data[i * 4 + 3] = mask.data[i]; // Set alpha
+        }
+        ctx.putImageData(imageData, 0, 0);
+
+        // Enable download
+        document.getElementById('download').href = canvas.toDataURL('image/png');
+        document.getElementById('download').style.display = 'inline-block';
+        status.textContent = '✨ Done! Click to download.';
+
+      } catch (err) {
+        console.error(err);
+        status.textContent = '❌ Processing failed: ' + err.message;
+      }
+    });
+  </script>
+  <style>
+    body { font-family: system-ui; max-width: 800px; margin: 2rem auto; padding: 0 1rem; }
+    .hidden { display: none; }
+    #output { max-width: 100%; border: 1px solid #ddd; margin: 1rem 0; }
+    button { padding: 0.5rem 1rem; margin: 0.25rem; cursor: pointer; }
+    #status { margin: 1rem 0; padding: 0.5rem; background: #f0f0f0; border-radius: 4px; }
+  </style>
+</head>
+<body>
+  <h1>🎨 Background Remover API</h1>
+  <p>Powered by <a href="https://github.com/addyosmani/bg-remove" target="_blank">Transformers.js + RMBG-1.4</a></p>
+  
+  <button id="loadModel">🚀 Load AI Model (First Time Only)</button>
+  <input type="file" id="upload" accept="image/*" disabled />
+  
+  <div id="status">Click "Load AI Model" to start</div>
+  
+  <canvas id="output"></canvas>  
+  <a id="download" class="hidden" download="no-bg.png">
+    <button>⬇️ Download PNG</button>
+  </a>
+
+  <details>
+    <summary>🔧 API Usage</summary>
+    <pre>
+// This is a browser-based API - no server processing needed!
+// Just embed this page or use the client-side code:
+
+const response = await fetch('/api/remove-bg', {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' }
+});
+const config = await response.json();
+// → Use client-side Transformers.js as shown above
+    </pre>
+  </details>
+</body>
+</html>
