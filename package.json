@@ -1,6 +1,7 @@
 {
   "name": "bg-remover-api",
   "version": "1.0.0",
+  "description": "Free browser-based background remover API on Vercel",
   "type": "module",
   "scripts": {
     "dev": "vercel dev",
@@ -11,5 +12,8 @@
   },
   "devDependencies": {
     "vercel": "^33.0.0"
+  },
+  "engines": {
+    "node": "18.x"
   }
 }
